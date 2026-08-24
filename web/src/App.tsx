@@ -11,7 +11,8 @@ import {
   deleteMessage,
   clearInbox,
   injectTestEmail,
-  getLiveAvailableDomains,
+  REAL_AVAILABLE_DOMAINS,
+  getProviderForDomain,
 } from './api';
 import {
   ShieldCheck,
@@ -27,23 +28,21 @@ import {
   ExternalLink,
 } from 'lucide-react';
 
-const FALLBACK_DOMAINS = ['emalupe.com', 'kilat.eu.org'];
-
 function generateRandomEmail(domain: string): string {
   const randomChars = Math.random().toString(36).substring(2, 8);
   return `kilat.${randomChars}@${domain}`;
 }
 
 export function App() {
-  const [availableDomains, setAvailableDomains] = useState<string[]>(FALLBACK_DOMAINS);
+  const availableDomains = REAL_AVAILABLE_DOMAINS;
   const [domain, setDomain] = useState<string>(() => {
-    return localStorage.getItem('kilat_mail_domain') || 'emalupe.com';
+    return localStorage.getItem('kilat_mail_domain') || 'sharklasers.com';
   });
 
   const [currentEmail, setCurrentEmail] = useState<string>(() => {
     const saved = localStorage.getItem('kilat_mail_current_address');
     if (saved) return saved;
-    const initial = generateRandomEmail('emalupe.com');
+    const initial = generateRandomEmail('sharklasers.com');
     localStorage.setItem('kilat_mail_current_address', initial);
     return initial;
   });
@@ -58,24 +57,7 @@ export function App() {
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
-  // Ambil live domains yang terhubung ke MX record
-  useEffect(() => {
-    getLiveAvailableDomains().then((domains) => {
-      if (domains && domains.length > 0) {
-        setAvailableDomains(domains);
-        // Jika domain saat ini belum live, arahkan ke domain live pertama
-        if (!domains.includes(domain)) {
-          const firstDomain = domains[0];
-          setDomain(firstDomain);
-          localStorage.setItem('kilat_mail_domain', firstDomain);
-          const userPart = currentEmail.split('@')[0];
-          const newAddress = `${userPart}@${firstDomain}`;
-          setCurrentEmail(newAddress);
-          localStorage.setItem('kilat_mail_current_address', newAddress);
-        }
-      }
-    });
-  }, []);
+  const currentProvider = getProviderForDomain(domain);
 
   const faqs = [
     {
@@ -83,16 +65,16 @@ export function App() {
       a: 'Kilat Mail adalah layanan email sementara (disposable temporary email) gratis untuk menerima pesan dan kode verifikasi OTP secara instan tanpa perlu registrasi.',
     },
     {
-      q: 'Apakah Kilat Mail benar-benar bisa menerima email asli dari luar?',
-      a: 'Ya, 100%! Kilat Mail terhubung langsung ke Mail Exchange (MX) server live. Kamu bisa mengirim email asli dari akun Gmail, Yahoo, Microsoft, atau meminta kode OTP dari platform manapun ke alamat email aktifmu.',
+      q: 'Bagaimana status domain @kilat.eu.org?',
+      a: 'Domain @kilat.eu.org terhubung ke Cloudflare Workers D1 SQLite backend. Jika kamu menggunakan domain publik seperti @sharklasers.com, @guerrillamail.com, atau @emalupe.com, email langsung terhubung ke MX server global aktif.',
+    },
+    {
+      q: 'Apakah saya bisa memilih domain lain?',
+      a: 'Bisa! Kami menyediakan berbagai pilihan domain real live seperti @sharklasers.com, @emalupe.com, @guerrillamail.com, @pokemail.net, @spam4.me, dan @grr.la. Cukup klik tombol dropdown domain di Email Bar.',
     },
     {
       q: 'Apakah bisa digunakan oleh Script / Bot / Scraper?',
       a: 'Ya! Kilat Mail didesain ramah bot & AI browser agent dengan semantic selector (data-testid) dan REST API publik yang dapat dipanggil langsung dari Python, cURL, Node.js, atau Playwright/Puppeteer.',
-    },
-    {
-      q: 'Berapa lama email yang masuk akan disimpan?',
-      a: 'Email secara otomatis dibersihkan dalam 48 jam untuk menjaga kebersihan data dan privasi pengguna.',
     },
     {
       q: 'Apakah Kilat Mail 100% gratis?',
@@ -346,9 +328,9 @@ export function App() {
 
             <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
               <Zap className="w-5 h-5 text-emerald-400 mb-2" />
-              <h3 className="text-sm font-bold text-zinc-100 mb-1">Live Ingestion Fast</h3>
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">Multi-Domain Engine</h3>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Penerimaan email realtime dengan pembersihan berkala otomatis.
+                Dukungan multi-provider Mail.tm, Guerrilla Mail, dan Cloudflare Workers.
               </p>
             </div>
           </div>
@@ -369,17 +351,14 @@ export function App() {
 
             <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 font-mono text-xs text-zinc-300 space-y-2 overflow-x-auto">
               <div className="text-zinc-500 font-sans text-[11px] font-bold uppercase tracking-wider">
-                # 1. Fetch Inbox Messages
+                # Provider Aktif: {currentProvider.toUpperCase()} ({domain})
               </div>
               <div className="text-emerald-400 font-mono select-all">
-                GET https://api.mail.tm/messages (dengan Bearer token)
-              </div>
-
-              <div className="text-zinc-500 font-sans text-[11px] font-bold uppercase tracking-wider pt-2">
-                # 2. Fetch Single Message Detail
-              </div>
-              <div className="text-emerald-400 font-mono select-all">
-                GET https://api.mail.tm/messages/:id
+                {currentProvider === 'cloudflare'
+                  ? `GET https://kilat-mail-worker.zzdree.workers.dev/api/inbox?email=${currentEmail}`
+                  : currentProvider === 'guerrilla'
+                  ? `GET https://api.guerrillamail.com/ajax.php?f=get_email_list&offset=0`
+                  : `GET https://api.mail.tm/messages`}
               </div>
             </div>
           </div>
@@ -427,7 +406,7 @@ export function App() {
         <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="font-bold text-zinc-300">Kilat Mail</span>
-            <span>— Email Sementara Bebas Spam</span>
+            <span>— Email Sementara Multi-Provider</span>
           </div>
 
           <div className="flex items-center gap-4 text-zinc-400">
