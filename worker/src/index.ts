@@ -25,7 +25,6 @@ function jsonResponse<T>(data: ApiResponse<T>, status = 200, env: Env): Response
 export default {
   /**
    * 📬 1. EMAIL ROUTING EVENT HANDLER
-   * Dijalankan otomatis oleh Cloudflare Email Routing saat ada email masuk.
    */
   async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
     try {
@@ -72,8 +71,7 @@ export default {
   },
 
   /**
-   * 🌐 2. REST API & REALTIME SSE HANDLER
-   * Menangani request dari web frontend.
+   * 🌐 2. REST API HANDLER (Bot & Agent Friendly)
    */
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -92,7 +90,78 @@ export default {
       return jsonResponse({ success: true, data: { status: 'healthy', timestamp: new Date().toISOString() } }, 200, env);
     }
 
-    // Route: GET /api/inbox?email=xxx (List pesan ringkas tanpa HTML berat)
+    // 🚀 SPECIAL AGENT ROUTE: GET /api/otp?email=xxx (Direct 1-line latest OTP code extraction)
+    if (url.pathname === '/api/otp' && request.method === 'GET') {
+      const email = url.searchParams.get('email')?.toLowerCase().trim();
+      if (!email) {
+        return jsonResponse({ success: false, error: 'Parameter email wajib disertakan' }, 400, env);
+      }
+
+      try {
+        const latestOtpMessage = await env.DB.prepare(
+          `SELECT id, recipient, sender_name, sender_address, subject, detected_otp, created_at
+           FROM inbox
+           WHERE recipient = ? AND detected_otp IS NOT NULL
+           ORDER BY created_at DESC
+           LIMIT 1`
+        )
+          .bind(email)
+          .first<EmailMessageRecord>();
+
+        if (latestOtpMessage && latestOtpMessage.detected_otp) {
+          return jsonResponse({
+            success: true,
+            data: {
+              has_otp: true,
+              latest_otp: latestOtpMessage.detected_otp,
+              message_id: latestOtpMessage.id,
+              subject: latestOtpMessage.subject,
+              sender: latestOtpMessage.sender_name || latestOtpMessage.sender_address,
+              received_at: latestOtpMessage.created_at,
+            },
+          }, 200, env);
+        }
+
+        // Cek pesan terbaru walaupun regex otomatis belum mendeteksi
+        const latestAnyMessage = await env.DB.prepare(
+          `SELECT id, recipient, sender_name, sender_address, subject, body_text, created_at
+           FROM inbox
+           WHERE recipient = ?
+           ORDER BY created_at DESC
+           LIMIT 1`
+        )
+          .bind(email)
+          .first<EmailMessageRecord>();
+
+        if (latestAnyMessage) {
+          const manualScanOtp = extractOtpCode(latestAnyMessage.subject, latestAnyMessage.body_text);
+          return jsonResponse({
+            success: true,
+            data: {
+              has_otp: Boolean(manualScanOtp),
+              latest_otp: manualScanOtp || null,
+              message_id: latestAnyMessage.id,
+              subject: latestAnyMessage.subject,
+              sender: latestAnyMessage.sender_name || latestAnyMessage.sender_address,
+              received_at: latestAnyMessage.created_at,
+            },
+          }, 200, env);
+        }
+
+        return jsonResponse({
+          success: true,
+          data: {
+            has_otp: false,
+            latest_otp: null,
+            message: 'Belum ada email masuk untuk alamat ini',
+          },
+        }, 200, env);
+      } catch (err: any) {
+        return jsonResponse({ success: false, error: err.message || 'Gagal mengambil OTP' }, 500, env);
+      }
+    }
+
+    // Route: GET /api/inbox?email=xxx
     if (url.pathname === '/api/inbox' && request.method === 'GET') {
       const email = url.searchParams.get('email')?.toLowerCase().trim();
       if (!email) {
@@ -116,7 +185,7 @@ export default {
       }
     }
 
-    // Route: GET /api/message/:id (Detail pesan lengkap termasuk HTML & tandai sudah dibaca)
+    // Route: GET /api/message/:id
     if (url.pathname.startsWith('/api/message/') && request.method === 'GET') {
       const id = url.pathname.replace('/api/message/', '').trim();
       if (!id) {
@@ -132,7 +201,6 @@ export default {
           return jsonResponse({ success: false, error: 'Pesan tidak ditemukan' }, 404, env);
         }
 
-        // Tandai sudah dibaca di background
         ctx.waitUntil(
           env.DB.prepare(`UPDATE inbox SET is_read = 1 WHERE id = ?`).bind(id).run()
         );
@@ -143,7 +211,7 @@ export default {
       }
     }
 
-    // Route: DELETE /api/message/:id (Hapus 1 pesan)
+    // Route: DELETE /api/message/:id
     if (url.pathname.startsWith('/api/message/') && request.method === 'DELETE') {
       const id = url.pathname.replace('/api/message/', '').trim();
       try {
@@ -154,7 +222,7 @@ export default {
       }
     }
 
-    // Route: DELETE /api/inbox?email=xxx (Hapus semua pesan untuk email tersebut)
+    // Route: DELETE /api/inbox?email=xxx
     if (url.pathname === '/api/inbox' && request.method === 'DELETE') {
       const email = url.searchParams.get('email')?.toLowerCase().trim();
       if (!email) {
@@ -175,7 +243,6 @@ export default {
 
   /**
    * 🧹 3. SCHEDULED CRON AUTO-CLEANUP
-   * Membersihkan email lama secara berkala sesuai TTL (default: 48 jam).
    */
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     const expiryHours = parseInt(env.EMAIL_EXPIRY_HOURS || '48', 10);

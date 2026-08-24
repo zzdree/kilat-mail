@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { EmailBar } from './components/EmailBar';
 import { InboxList } from './components/InboxList';
 import { MessageDetail } from './components/MessageDetail';
 import { QrModal } from './components/QrModal';
+import { CodeSnippets } from './components/CodeSnippets';
 import { InboxItem, MessageDetail as IMessageDetail } from './types';
 import {
   fetchInbox,
@@ -33,6 +34,26 @@ function generateRandomEmail(domain: string): string {
   return `kilat.${randomChars}@${domain}`;
 }
 
+// Audio alert generator (Web Audio API synth chime, no external MP3 asset required)
+function playChimeSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.4);
+  } catch {
+    // AudioContext blocked or not supported
+  }
+}
+
 export function App() {
   const availableDomains = REAL_AVAILABLE_DOMAINS;
   const [domain, setDomain] = useState<string>(() => {
@@ -57,7 +78,30 @@ export function App() {
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
+  const prevInboxLength = useRef<number>(0);
   const currentProvider = getProviderForDomain(domain);
+
+  // Ambil latest OTP dari pesan masuk
+  const latestOtp = inboxItems.find((i) => Boolean(i.detected_otp))?.detected_otp || '';
+
+  // Tab Title Flashing saat ada pesan baru
+  useEffect(() => {
+    if (latestOtp) {
+      document.title = `(${inboxItems.length}) 🔑 OTP: ${latestOtp} - Kilat Mail ⚡`;
+    } else if (inboxItems.length > 0) {
+      document.title = `(${inboxItems.length}) ✉️ Email Masuk - Kilat Mail ⚡`;
+    } else {
+      document.title = 'Kilat Mail ⚡ — Instant & Serverless Temporary Email';
+    }
+  }, [inboxItems, latestOtp]);
+
+  // Audio notification saat ada email baru mendarat
+  useEffect(() => {
+    if (inboxItems.length > prevInboxLength.current && prevInboxLength.current !== 0) {
+      playChimeSound();
+    }
+    prevInboxLength.current = inboxItems.length;
+  }, [inboxItems]);
 
   const faqs = [
     {
@@ -65,16 +109,16 @@ export function App() {
       a: 'Kilat Mail adalah layanan email sementara (disposable temporary email) gratis untuk menerima pesan dan kode verifikasi OTP secara instan tanpa perlu registrasi.',
     },
     {
-      q: 'Bagaimana status domain @kilat.eu.org?',
-      a: 'Domain @kilat.eu.org terhubung ke Cloudflare Workers D1 SQLite backend. Jika kamu menggunakan domain publik seperti @sharklasers.com, @guerrillamail.com, atau @emalupe.com, email langsung terhubung ke MX server global aktif.',
+      q: 'Bagaimana status domain @kilat.eu.org, @kilat.us.kg, @kilat.pp.ua?',
+      a: 'Domain-domain tersebut sudah terdaftar di zona Cloudflare. Begitu delegasi NS selesai, Email Routing otomatis mengalirkan email ke database D1 SQLite edge.',
     },
     {
-      q: 'Apakah saya bisa memilih domain lain?',
-      a: 'Bisa! Kami menyediakan berbagai pilihan domain real live seperti @sharklasers.com, @emalupe.com, @guerrillamail.com, @pokemail.net, @spam4.me, dan @grr.la. Cukup klik tombol dropdown domain di Email Bar.',
+      q: 'Apakah saya bisa memilih domain lain yang langsung aktif?',
+      a: 'Bisa! Kami menyediakan pilihan domain real global seperti @sharklasers.com, @emalupe.com, @guerrillamail.com, @pokemail.net, @spam4.me, dan @grr.la yang langsung aktif 100% saat ini juga.',
     },
     {
       q: 'Apakah bisa digunakan oleh Script / Bot / Scraper?',
-      a: 'Ya! Kilat Mail didesain ramah bot & AI browser agent dengan semantic selector (data-testid) dan REST API publik yang dapat dipanggil langsung dari Python, cURL, Node.js, atau Playwright/Puppeteer.',
+      a: 'Ya! Kilat Mail didesain ramah bot & AI browser agent dengan semantic selector (data-testid, #kilat-hub data attributes) dan REST API publik /api/otp yang dapat dipanggil langsung dari Python, cURL, Node.js, atau Playwright/Puppeteer.',
     },
     {
       q: 'Apakah Kilat Mail 100% gratis?',
@@ -131,6 +175,27 @@ export function App() {
     },
     [currentEmail, selectedId]
   );
+
+  // Keyboard Shortcuts (C = Copy, O = Copy OTP, N = New Random, R = Refresh)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+      if (e.key === 'c' || e.key === 'C') {
+        navigator.clipboard.writeText(currentEmail);
+      } else if ((e.key === 'o' || e.key === 'O') && latestOtp) {
+        navigator.clipboard.writeText(latestOtp);
+      } else if (e.key === 'n' || e.key === 'N') {
+        handleRandomize();
+      } else if (e.key === 'r' || e.key === 'R') {
+        loadInbox(true);
+      } else if (e.key === 'Escape' && selectedId) {
+        setSelectedId(null);
+        setSelectedMessage(null);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentEmail, latestOtp, selectedId, loadInbox]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -206,6 +271,17 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center selection:bg-emerald-500 selection:text-zinc-950">
+      {/* 🤖 AGENT/BOT METADATA HUB (Machine-Readable Node for Scrapers & Browser Agents) */}
+      <div
+        id="kilat-hub"
+        className="sr-only"
+        data-email={currentEmail}
+        data-latest-otp={latestOtp}
+        data-inbox-count={inboxItems.length}
+        data-provider={currentProvider}
+        aria-hidden="true"
+      />
+
       {/* Header */}
       <Header isLive={true} />
 
@@ -217,7 +293,7 @@ export function App() {
             Email Sementara Gratis & Cepat
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto leading-relaxed">
-            Terima email aktivasi dan kode OTP instan. Lindungi kotak masuk aslimu dari spam dan pelacak data.
+            Terima email aktivasi dan kode OTP instan. Ramah untuk pengguna, AI agent, scraper, dan bot.
           </p>
         </div>
 
@@ -234,12 +310,24 @@ export function App() {
           onOpenQr={() => setIsQrOpen(true)}
         />
 
-        {/* Simulator Test Action */}
-        <div className="flex justify-end mb-4 -mt-3">
+        {/* Helper & Shortcut Bar */}
+        <div className="flex items-center justify-between mb-4 -mt-3 text-[11px] text-zinc-500">
+          <div className="hidden sm:flex items-center gap-2 font-mono">
+            <span>Shortcut:</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">C</kbd> Salin
+            <kbd className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">N</kbd> Acak Baru
+            <kbd className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">R</kbd> Refresh
+            {latestOtp && (
+              <>
+                <kbd className="px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-400 font-bold">O</kbd> Salin OTP
+              </>
+            )}
+          </div>
+
           <button
             onClick={handleInjectTest}
             data-testid="mock-otp-btn"
-            className="text-[11px] text-zinc-500 hover:text-emerald-400 flex items-center gap-1 transition-colors cursor-pointer"
+            className="hover:text-emerald-400 flex items-center gap-1 transition-colors cursor-pointer ml-auto"
           >
             <Sparkles className="w-3 h-3" />
             <span>Simulasi Kirim Email Uji Coba</span>
@@ -328,40 +416,17 @@ export function App() {
 
             <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
               <Zap className="w-5 h-5 text-emerald-400 mb-2" />
-              <h3 className="text-sm font-bold text-zinc-100 mb-1">Multi-Domain Engine</h3>
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">Multi-Domain & Bot Native</h3>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Dukungan multi-provider Mail.tm, Guerrilla Mail, dan Cloudflare Workers.
+                Didukung REST API publik dan selector data-testid ramah AI Agent & Scraper.
               </p>
             </div>
           </div>
         </section>
 
-        {/* API / Developer & Scraper Documentation Section */}
+        {/* Interactive Code Snippets Explorer Section */}
         <section id="api" className="mb-12 border-t border-zinc-800/80 pt-8">
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 sm:p-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Terminal className="w-4 h-4 text-emerald-400" />
-              <h2 className="text-sm sm:text-base font-bold text-zinc-100">
-                Akses API untuk Bot & Automation (Scraper Friendly)
-              </h2>
-            </div>
-            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
-              Kamu bisa mengakses kotak masuk secara terprogram menggunakan HTTP REST endpoint langsung dari Python, Node.js, cURL, atau browser automation:
-            </p>
-
-            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 font-mono text-xs text-zinc-300 space-y-2 overflow-x-auto">
-              <div className="text-zinc-500 font-sans text-[11px] font-bold uppercase tracking-wider">
-                # Provider Aktif: {currentProvider.toUpperCase()} ({domain})
-              </div>
-              <div className="text-emerald-400 font-mono select-all">
-                {currentProvider === 'cloudflare'
-                  ? `GET https://kilat-mail-worker.zzdree.workers.dev/api/inbox?email=${currentEmail}`
-                  : currentProvider === 'guerrilla'
-                  ? `GET https://api.guerrillamail.com/ajax.php?f=get_email_list&offset=0`
-                  : `GET https://api.mail.tm/messages`}
-              </div>
-            </div>
-          </div>
+          <CodeSnippets email={currentEmail} />
         </section>
 
         {/* FAQ Section */}
@@ -406,7 +471,7 @@ export function App() {
         <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="font-bold text-zinc-300">Kilat Mail</span>
-            <span>— Email Sementara Multi-Provider</span>
+            <span>— The AI Agent & Developer-First Disposable Email</span>
           </div>
 
           <div className="flex items-center gap-4 text-zinc-400">
