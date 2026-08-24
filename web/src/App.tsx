@@ -7,7 +7,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { SetupGuideModal } from './components/SetupGuideModal';
 import { InboxItem, MessageDetail as IMessageDetail } from './types';
 import { fetchInbox, fetchMessage, deleteMessage, clearInbox, injectTestEmail } from './api';
-import { ShieldCheck, Zap, KeyRound, Clock, CheckCircle2, ChevronDown } from 'lucide-react';
+import { ShieldCheck, Zap, KeyRound, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 const DEFAULT_DOMAIN = 'kilat.eu.org';
 
@@ -39,7 +39,28 @@ export function App() {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
-  const [mobileShowDetail, setMobileShowDetail] = useState(false);
+
+  // FAQ open states
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+
+  const faqs = [
+    {
+      q: 'Apakah Kilat Mail benar-benar 100% gratis?',
+      a: 'Ya, Kilat Mail dibangun sepenuhnya di atas tier gratis Cloudflare Serverless (Email Routing, Workers, D1 SQLite, dan Pages) tanpa biaya langganan atau batasan tersembunyi.',
+    },
+    {
+      q: 'Berapa lama email yang masuk akan disimpan?',
+      a: 'Email secara otomatis disimpan di database edge D1 dan dibersihkan otomatis dalam 48 jam oleh cron trigger pembersih berkala.',
+    },
+    {
+      q: 'Bagaimana cara kerja Smart OTP Extractor?',
+      a: 'Algoritma regex cerdas kami memindai subjek dan isi pesan untuk mendeteksi digit kode verifikasi / 2FA (4-8 karakter), lalu menyajikannya dalam tombol 1-klik salin.',
+    },
+    {
+      q: 'Bisakah saya menggunakan domain pribadi saya sendiri?',
+      a: 'Tentu! Anda bisa membuka menu "Panduan" atau "Domain" di bagian atas untuk menghubungkan domain Cloudflare Email Routing milik Anda sendiri.',
+    },
+  ];
 
   // Simpan domain & email saat berubah
   const handleSaveDomain = (newDomain: string) => {
@@ -58,7 +79,6 @@ export function App() {
     localStorage.setItem('kilat_mail_current_address', fresh);
     setSelectedId(null);
     setSelectedMessage(null);
-    setMobileShowDetail(false);
   };
 
   const handleChangeUsername = (username: string) => {
@@ -108,7 +128,6 @@ export function App() {
       .then((detail) => {
         if (isSubscribed) {
           setSelectedMessage(detail);
-          // Update status is_read di state lokal
           setInboxItems((prev) =>
             prev.map((item) => (item.id === selectedId ? { ...item, is_read: 1 } : item))
           );
@@ -145,7 +164,6 @@ export function App() {
       if (selectedId === id) {
         setSelectedId(null);
         setSelectedMessage(null);
-        setMobileShowDetail(false);
       }
     } catch (err) {
       console.error('Error deleting message:', err);
@@ -160,7 +178,6 @@ export function App() {
       setInboxItems([]);
       setSelectedId(null);
       setSelectedMessage(null);
-      setMobileShowDetail(false);
     } catch (err) {
       console.error('Error clearing inbox:', err);
     }
@@ -172,11 +189,10 @@ export function App() {
     const created = injectTestEmail(currentEmail, randomOtp);
     loadInbox(true);
     setSelectedId(created.id);
-    setMobileShowDetail(true);
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-gray-100 flex flex-col selection:bg-amber-500 selection:text-black">
+    <div className="min-h-screen bg-[#0B0F19] text-gray-100 flex flex-col selection:bg-amber-500 selection:text-black overflow-x-hidden">
       {/* Header Navigation */}
       <Header
         isLive={true}
@@ -184,19 +200,19 @@ export function App() {
         onOpenGuide={() => setIsGuideOpen(true)}
       />
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 sm:py-10 flex flex-col">
+      {/* Main Hero & Content Container */}
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6 sm:py-10 flex flex-col">
         {/* Hero Tagline for Visitors */}
         <div className="text-center mb-6 sm:mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-3 shadow-sm">
             <Zap className="w-3.5 h-3.5 fill-amber-400" />
-            <span>Gratis • Tanpa Registrasi • Auto-Detect OTP</span>
+            <span>100% Gratis • Tanpa Registrasi • Auto-Detect OTP</span>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mb-2">
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mb-2.5">
             Email Sementara <span className="text-amber-400">Super Cepat</span> & Otomatis
           </h1>
-          <p className="text-xs sm:text-sm text-gray-400 max-w-xl mx-auto leading-relaxed">
-            Gunakan alamat email ini untuk verifikasi akun, terima kode OTP instan, dan jaga privasi inbox utama kamu dari spam.
+          <p className="text-xs sm:text-sm text-gray-400 max-w-lg mx-auto leading-relaxed">
+            Gunakan alamat email sekali pakai untuk verifikasi akun, aktivasi instan, dan menjaga privasi inbox utama dari spam.
           </p>
         </div>
 
@@ -210,93 +226,123 @@ export function App() {
           onInjectTest={handleInjectTest}
         />
 
-        {/* Master-Detail Split Content */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 flex-1 items-start mb-12">
-          {/* Left: Inbox List */}
-          <div className={`md:col-span-5 ${mobileShowDetail ? 'hidden md:block' : 'block'}`}>
-            <InboxList
-              items={inboxItems}
-              selectedId={selectedId}
-              onSelectItem={(id) => {
-                setSelectedId(id);
-                setMobileShowDetail(true);
-              }}
-              onDeleteItem={handleDeleteItem}
-              onClearAll={handleClearAll}
-              isLoading={isLoadingInbox}
-            />
-          </div>
-
-          {/* Right: Message Detail */}
-          <div className={`md:col-span-7 ${!mobileShowDetail ? 'hidden md:block' : 'block'}`}>
+        {/* Dynamic Display: Inbox Stream OR Message Reader */}
+        <div className="mb-12 transition-all duration-200">
+          {selectedMessage || isLoadingDetail ? (
             <MessageDetail
               message={selectedMessage}
               isLoading={isLoadingDetail}
               onDelete={(id) => handleDeleteItem(id)}
-              onBack={() => setMobileShowDetail(false)}
+              onBack={() => {
+                setSelectedId(null);
+                setSelectedMessage(null);
+              }}
             />
-          </div>
+          ) : (
+            <InboxList
+              items={inboxItems}
+              selectedId={selectedId}
+              onSelectItem={(id) => setSelectedId(id)}
+              onDeleteItem={handleDeleteItem}
+              onClearAll={handleClearAll}
+              isLoading={isLoadingInbox}
+            />
+          )}
         </div>
 
-        {/* Features & Value Props Section */}
+        {/* Value Props Grid */}
         <div className="pt-8 border-t border-gray-800/80">
           <div className="text-center mb-8">
             <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
-              Kenapa Memakai Kilat Mail?
+              Keunggulan Kilat Mail
             </h2>
-            <p className="text-xs sm:text-sm text-gray-400">
-              Dirancang untuk kemudahan dan kecepatan maksimal bagi setiap pengunjung.
+            <p className="text-xs text-gray-400">
+              Dirancang dengan presisi untuk kenyamanan dan privasi setiap pengunjung.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-            {/* Feature 1 */}
-            <div className="bg-[#111827]/80 border border-gray-800 rounded-2xl p-5 hover:border-amber-500/40 transition-colors shadow-lg">
+            <div className="bg-[#111827] border border-gray-800/90 rounded-2xl p-5 hover:border-amber-500/40 transition-colors shadow-lg">
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3.5">
                 <KeyRound className="w-5 h-5" />
               </div>
               <h3 className="text-sm font-bold text-white mb-1.5">Smart OTP Extractor</h3>
               <p className="text-xs text-gray-400 leading-relaxed">
-                Secara otomatis mengekstrak digit kode verifikasi atau OTP dari pesan, sehingga kamu bisa menyalinnya dalam 1 klik.
+                Mendeteksi kode verifikasi secara otomatis dari subjek/isi email untuk disalin langsung dalam 1 klik.
               </p>
             </div>
 
-            {/* Feature 2 */}
-            <div className="bg-[#111827]/80 border border-gray-800 rounded-2xl p-5 hover:border-cyan-500/40 transition-colors shadow-lg">
+            <div className="bg-[#111827] border border-gray-800/90 rounded-2xl p-5 hover:border-cyan-500/40 transition-colors shadow-lg">
               <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-3.5">
                 <ShieldCheck className="w-5 h-5" />
               </div>
-              <h3 className="text-sm font-bold text-white mb-1.5">100% Privasi & Tanpa Login</h3>
+              <h3 className="text-sm font-bold text-white mb-1.5">100% Privasi & Bersih</h3>
               <p className="text-xs text-gray-400 leading-relaxed">
-                Tidak ada login, cookie pelacak, atau data pribadi yang disimpan. Email masuk aman dibersihkan secara berkala.
+                Tanpa registrasi, tanpa tracking, dan konten HTML dibersihkan dari pelacak dengan DOMPurify.
               </p>
             </div>
 
-            {/* Feature 3 */}
-            <div className="bg-[#111827]/80 border border-gray-800 rounded-2xl p-5 hover:border-emerald-500/40 transition-colors shadow-lg">
+            <div className="bg-[#111827] border border-gray-800/90 rounded-2xl p-5 hover:border-emerald-500/40 transition-colors shadow-lg">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3.5">
                 <Zap className="w-5 h-5" />
               </div>
               <h3 className="text-sm font-bold text-white mb-1.5">Serverless Edge Cloudflare</h3>
               <p className="text-xs text-gray-400 leading-relaxed">
-                Didukung oleh Cloudflare Email Routing, Workers, dan D1 SQLite Edge untuk latensi penerimaan super rendah.
+                Ditenagai Cloudflare Email Routing, Workers, dan D1 SQLite Edge untuk latensi ultra rendah.
               </p>
+            </div>
+          </div>
+
+          {/* FAQ Accordion Section */}
+          <div className="bg-[#111827] border border-gray-800 rounded-2xl p-6 mb-8 shadow-xl">
+            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-amber-400" />
+              <span>Pertanyaan yang Sering Diajukan (FAQ)</span>
+            </h3>
+
+            <div className="space-y-3">
+              {faqs.map((faq, index) => {
+                const isOpen = openFaqIndex === index;
+                return (
+                  <div
+                    key={index}
+                    className="border border-gray-800/80 rounded-xl overflow-hidden bg-[#0B0F19]/60"
+                  >
+                    <button
+                      onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                      className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold text-gray-200 hover:text-amber-400 transition-colors"
+                    >
+                      <span>{faq.q}</span>
+                      {isOpen ? (
+                        <ChevronUp className="w-4 h-4 text-amber-400 shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />
+                      )}
+                    </button>
+                    {isOpen && (
+                      <div className="px-4 pb-3.5 pt-1 text-xs text-gray-400 leading-relaxed border-t border-gray-800/60">
+                        {faq.a}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800/80 py-5 px-4 text-center text-xs text-gray-500 bg-[#0B0F19]">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="border-t border-gray-800/80 py-6 px-4 text-center text-xs text-gray-500 bg-[#0B0F19]">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="font-bold text-gray-300">⚡ Kilat Mail</span>
-            <span>— Layanan Email Sementara Serverless</span>
+            <span>— Serverless Cloudflare Stack</span>
           </div>
           <div className="flex items-center gap-4">
             <a
               href="https://kilat-mail.pages.dev"
-              className="text-amber-400 hover:underline"
+              className="text-amber-400 hover:underline font-medium"
             >
               kilat-mail.pages.dev
             </a>
@@ -307,7 +353,7 @@ export function App() {
               rel="noreferrer"
               className="text-gray-400 hover:text-white transition-colors"
             >
-              GitHub Repo
+              GitHub Repository
             </a>
           </div>
         </div>

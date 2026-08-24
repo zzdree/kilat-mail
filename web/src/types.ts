@@ -13,4 +13,5 @@ export interface InboxItem {
 export interface MessageDetail extends InboxItem {
   body_text: string | null;
   body_html: string | null;
+  raw_headers?: string | null;
 }

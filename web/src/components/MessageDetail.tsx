@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import DOMPurify from 'dompurify';
-import { Mail, Calendar, User, Trash2, Code, Eye, FileText, ArrowLeft } from 'lucide-react';
+import { Calendar, User, Trash2, Code, Eye, FileText, ArrowLeft } from 'lucide-react';
 import { MessageDetail as IMessageDetail } from '../types';
 import { OtpCard } from './OtpCard';
 
@@ -21,25 +21,15 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
 
   if (isLoading) {
     return (
-      <div className="bg-[#111827] border border-gray-800 rounded-2xl p-6 flex flex-col items-center justify-center h-[520px] text-gray-400">
-        <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-3" />
-        <p className="text-xs">Memuat isi pesan...</p>
+      <div className="w-full bg-[#111827] border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center min-h-[420px] text-gray-400">
+        <div className="w-10 h-10 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-xs font-medium text-gray-400">Membuka rincian email...</p>
       </div>
     );
   }
 
   if (!message) {
-    return (
-      <div className="bg-[#111827] border border-gray-800 rounded-2xl p-6 flex flex-col items-center justify-center h-[520px] text-center">
-        <div className="w-14 h-14 rounded-2xl bg-gray-800/40 border border-gray-700 flex items-center justify-center text-gray-500 mb-3">
-          <Mail className="w-7 h-7" />
-        </div>
-        <h4 className="text-sm font-semibold text-gray-300 mb-1">Pilih Pesan untuk Dibaca</h4>
-        <p className="text-xs text-gray-500 max-w-xs">
-          Klik salah satu email dari daftar kotak masuk di sebelah kiri untuk melihat rincian isi pesan dan kode verifikasi.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   // Sanitasi HTML
@@ -51,100 +41,104 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
     : '';
 
   return (
-    <div className="bg-[#111827] border border-gray-800 rounded-2xl p-4 sm:p-6 flex flex-col h-[520px] overflow-hidden">
-      {/* Top action / navigation for mobile */}
-      <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-800 gap-2">
+    <div className="w-full bg-[#111827] border border-gray-800 rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col transition-all">
+      {/* Top Bar: Back button, view tabs, and delete */}
+      <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-800/80 gap-3 flex-wrap">
         <button
           onClick={onBack}
-          className="md:hidden flex items-center gap-1 text-xs text-gray-400 hover:text-white"
+          className="flex items-center gap-1.5 bg-gray-800/80 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700/60 text-xs font-semibold transition-all"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Kembali</span>
+          <ArrowLeft className="w-4 h-4 text-amber-400" />
+          <span>Kembali ke Inbox</span>
         </button>
 
-        {/* View Switcher Tabs */}
-        <div className="flex items-center bg-gray-900 border border-gray-800 rounded-lg p-0.5 text-xs">
-          {message.body_html && (
+        <div className="flex items-center gap-2">
+          {/* View Switcher Tabs */}
+          <div className="flex items-center bg-gray-900 border border-gray-800 rounded-lg p-0.5 text-xs">
+            {message.body_html && (
+              <button
+                onClick={() => setViewMode('html')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${
+                  viewMode === 'html'
+                    ? 'bg-amber-500 text-gray-950 font-bold'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>HTML</span>
+              </button>
+            )}
+
             <button
-              onClick={() => setViewMode('html')}
+              onClick={() => setViewMode('text')}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${
-                viewMode === 'html'
+                viewMode === 'text' || !message.body_html
                   ? 'bg-amber-500 text-gray-950 font-bold'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              <Eye className="w-3.5 h-3.5" />
-              <span>HTML</span>
+              <FileText className="w-3.5 h-3.5" />
+              <span>Teks</span>
             </button>
-          )}
 
-          <button
-            onClick={() => setViewMode('text')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${
-              viewMode === 'text' || !message.body_html
-                ? 'bg-amber-500 text-gray-950 font-bold'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>Teks Polos</span>
-          </button>
+            <button
+              onClick={() => setViewMode('raw')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${
+                viewMode === 'raw'
+                  ? 'bg-amber-500 text-gray-950 font-bold'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Code className="w-3.5 h-3.5" />
+              <span>Raw</span>
+            </button>
+          </div>
 
+          {/* Delete Action */}
           <button
-            onClick={() => setViewMode('raw')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${
-              viewMode === 'raw'
-                ? 'bg-amber-500 text-gray-950 font-bold'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            onClick={() => onDelete(message.id)}
+            className="p-1.5 bg-gray-800/80 hover:bg-red-500/20 text-gray-400 hover:text-red-400 rounded-lg border border-gray-700/60 hover:border-red-500/30 transition-all text-xs"
+            title="Hapus email ini"
           >
-            <Code className="w-3.5 h-3.5" />
-            <span>Raw</span>
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
-
-        {/* Delete Message Button */}
-        <button
-          onClick={() => onDelete(message.id)}
-          className="btn-ghost !p-2 text-gray-400 hover:text-red-400"
-          title="Hapus Pesan Ini"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
       </div>
 
-      {/* Message Header Metadata */}
-      <div className="mb-4">
-        <h2 className="text-base sm:text-lg font-bold text-white mb-2 leading-snug">
-          {message.subject || '(Tanpa Subjek)'}
-        </h2>
+      {/* Smart OTP Banner if detected */}
+      {message.detected_otp && (
+        <div className="mb-4">
+          <OtpCard otp={message.detected_otp} />
+        </div>
+      )}
 
-        <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-gray-400">
-          <div className="flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-amber-400" />
-            <span>
-              {message.sender_name ? (
-                <>
-                  <strong className="text-gray-200">{message.sender_name}</strong> &lt;{message.sender_address}&gt;
-                </>
-              ) : (
-                <strong className="text-gray-200">{message.sender_address}</strong>
-              )}
+      {/* Header Info */}
+      <div className="bg-[#0B0F19] border border-gray-800/80 rounded-xl p-4 mb-4">
+        <h1 className="text-base sm:text-xl font-bold text-white mb-2 leading-snug break-words">
+          {message.subject || '(Tanpa Subjek)'}
+        </h1>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-400 pt-2 border-t border-gray-800/60">
+          <div className="flex items-center gap-1.5 truncate">
+            <User className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="text-gray-500">Dari:</span>
+            <span className="text-gray-200 font-medium truncate">
+              {message.sender_name ? `${message.sender_name} <${message.sender_address}>` : message.sender_address}
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 font-mono text-[11px]">
-            <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{new Date(message.created_at).toLocaleString('id-ID')}</span>
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span className="text-gray-500">Waktu:</span>
+            <span className="text-gray-200 font-medium font-mono text-[11px]">
+              {new Date(message.created_at).toLocaleString()}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* OTP Highlight Widget (Jika Ada) */}
-      {message.detected_otp && <OtpCard otpCode={message.detected_otp} />}
-
-      {/* Message Body Content */}
-      <div className="flex-1 overflow-y-auto bg-gray-900/60 border border-gray-800/80 rounded-xl p-4 sm:p-5">
+      {/* Email Body Content Container */}
+      <div className="bg-[#0B0F19] border border-gray-800 rounded-xl p-4 sm:p-6 min-h-[260px] max-h-[550px] overflow-y-auto">
         {viewMode === 'html' && message.body_html ? (
           <div
             className="email-content-view"
@@ -152,11 +146,11 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
           />
         ) : viewMode === 'text' || !message.body_html ? (
           <pre className="whitespace-pre-wrap font-sans text-sm text-gray-300 leading-relaxed">
-            {message.body_text || 'Tidak ada teks isi pesan.'}
+            {message.body_text || 'Pesan tidak memiliki teks isi.'}
           </pre>
         ) : (
-          <pre className="font-mono text-xs text-gray-400 overflow-x-auto">
-            {JSON.stringify(message, null, 2)}
+          <pre className="whitespace-pre-wrap font-mono text-xs text-gray-400 bg-black/40 p-4 rounded-lg overflow-x-auto">
+            {message.raw_headers || 'Header data tidak tersedia.'}
           </pre>
         )}
       </div>
