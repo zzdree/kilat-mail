@@ -5,7 +5,7 @@ import { InboxItem, MessageDetail } from './types';
 // Providers:
 // 1. Mail.tm (@emalupe.com)
 // 2. Guerrilla Mail (@sharklasers.com, @guerrillamail.com, @pokemail.net, @spam4.me, @grr.la)
-// 3. Cloudflare Worker Native (@kilat.eu.org, @kilat.is-a.dev)
+// 3. Cloudflare Worker Native (@kilat.us.kg, @kilat.eu.org, @kilat.pp.ua)
 // ==========================================
 
 const STORAGE_EMAIL_KEY = 'kilat_mail_current_address';
@@ -19,13 +19,15 @@ const CLOUDFLARE_WORKER_API = 'https://kilat-mail-worker.zzdree.workers.dev';
 const FIXED_PASSWORD = 'KilatMailSecurePass123!';
 
 export const REAL_AVAILABLE_DOMAINS = [
-  'emalupe.com',
   'sharklasers.com',
+  'emalupe.com',
   'guerrillamail.com',
   'pokemail.net',
   'spam4.me',
   'grr.la',
+  'kilat.us.kg',
   'kilat.eu.org',
+  'kilat.pp.ua',
 ];
 
 export function getProviderForDomain(domain: string): 'mailtm' | 'guerrilla' | 'cloudflare' {
@@ -179,7 +181,6 @@ async function ensureGuerrillaSession(email: string): Promise<string> {
     }
   }
 
-  // Sinkronkan username email ke session sid
   if (sid && user) {
     try {
       await fetch(`${GUERRILLA_API}?f=set_email_user&email_user=${encodeURIComponent(user)}&sid_token=${sid}`);
@@ -287,7 +288,6 @@ export async function fetchInbox(email: string): Promise<InboxItem[]> {
 }
 
 export async function fetchMessage(id: string): Promise<MessageDetail> {
-  // 1. Mock Local
   if (id.startsWith('mock-')) {
     const raw = localStorage.getItem(LOCAL_MOCK_STORAGE_KEY);
     const all: MessageDetail[] = raw ? JSON.parse(raw) : [];
@@ -300,17 +300,14 @@ export async function fetchMessage(id: string): Promise<MessageDetail> {
     throw new Error('Pesan tidak ditemukan');
   }
 
-  // 2. Mail.tm
   if (id.startsWith('mtm_')) {
     return await fetchMailTmDetail(id.replace('mtm_', ''));
   }
 
-  // 3. Guerrilla Mail
   if (id.startsWith('gm_')) {
     return await fetchGuerrillaDetail(id.replace('gm_', ''));
   }
 
-  // 4. Cloudflare D1 Native
   return await fetchCloudflareDetail(id);
 }
 
@@ -342,7 +339,6 @@ export async function deleteMessage(id: string): Promise<void> {
     return;
   }
 
-  // Cloudflare D1
   await fetch(`${CLOUDFLARE_WORKER_API}/api/message/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
