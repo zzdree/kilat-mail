@@ -5,7 +5,14 @@ import { InboxList } from './components/InboxList';
 import { MessageDetail } from './components/MessageDetail';
 import { QrModal } from './components/QrModal';
 import { InboxItem, MessageDetail as IMessageDetail } from './types';
-import { fetchInbox, fetchMessage, deleteMessage, clearInbox, injectTestEmail } from './api';
+import {
+  fetchInbox,
+  fetchMessage,
+  deleteMessage,
+  clearInbox,
+  injectTestEmail,
+  getLiveAvailableDomains,
+} from './api';
 import {
   ShieldCheck,
   Zap,
@@ -20,14 +27,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 
-const DEFAULT_DOMAIN = 'kilat.eu.org';
-const AVAILABLE_DOMAINS = [
-  'kilat.eu.org',
-  'kilat.pp.ua',
-  'kilat.is-a.dev',
-  'kilat.js.cool',
-  'temp.kilat.eu.org',
-];
+const FALLBACK_DOMAINS = ['emalupe.com', 'kilat.eu.org'];
 
 function generateRandomEmail(domain: string): string {
   const randomChars = Math.random().toString(36).substring(2, 8);
@@ -35,14 +35,15 @@ function generateRandomEmail(domain: string): string {
 }
 
 export function App() {
+  const [availableDomains, setAvailableDomains] = useState<string[]>(FALLBACK_DOMAINS);
   const [domain, setDomain] = useState<string>(() => {
-    return localStorage.getItem('kilat_mail_domain') || DEFAULT_DOMAIN;
+    return localStorage.getItem('kilat_mail_domain') || 'emalupe.com';
   });
 
   const [currentEmail, setCurrentEmail] = useState<string>(() => {
     const saved = localStorage.getItem('kilat_mail_current_address');
     if (saved) return saved;
-    const initial = generateRandomEmail(DEFAULT_DOMAIN);
+    const initial = generateRandomEmail('emalupe.com');
     localStorage.setItem('kilat_mail_current_address', initial);
     return initial;
   });
@@ -57,14 +58,33 @@ export function App() {
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
+  // Ambil live domains yang terhubung ke MX record
+  useEffect(() => {
+    getLiveAvailableDomains().then((domains) => {
+      if (domains && domains.length > 0) {
+        setAvailableDomains(domains);
+        // Jika domain saat ini belum live, arahkan ke domain live pertama
+        if (!domains.includes(domain)) {
+          const firstDomain = domains[0];
+          setDomain(firstDomain);
+          localStorage.setItem('kilat_mail_domain', firstDomain);
+          const userPart = currentEmail.split('@')[0];
+          const newAddress = `${userPart}@${firstDomain}`;
+          setCurrentEmail(newAddress);
+          localStorage.setItem('kilat_mail_current_address', newAddress);
+        }
+      }
+    });
+  }, []);
+
   const faqs = [
     {
       q: 'Apa itu Kilat Mail?',
       a: 'Kilat Mail adalah layanan email sementara (disposable temporary email) gratis untuk menerima pesan dan kode verifikasi OTP secara instan tanpa perlu registrasi.',
     },
     {
-      q: 'Apakah saya bisa memilih domain lain?',
-      a: 'Ya! Kilat Mail mendukung beberapa domain gratis populer seperti @kilat.eu.org, @kilat.pp.ua, @kilat.is-a.dev, dan @kilat.js.cool. Kamu bisa memilihnya langsung di tombol domain di atas.',
+      q: 'Apakah Kilat Mail benar-benar bisa menerima email asli dari luar?',
+      a: 'Ya, 100%! Kilat Mail terhubung langsung ke Mail Exchange (MX) server live. Kamu bisa mengirim email asli dari akun Gmail, Yahoo, Microsoft, atau meminta kode OTP dari platform manapun ke alamat email aktifmu.',
     },
     {
       q: 'Apakah bisa digunakan oleh Script / Bot / Scraper?',
@@ -72,7 +92,7 @@ export function App() {
     },
     {
       q: 'Berapa lama email yang masuk akan disimpan?',
-      a: 'Email secara otomatis dibersihkan dalam 48 jam oleh cron cleaner Cloudflare edge D1 SQLite untuk menjaga kebersihan data dan privasi pengguna.',
+      a: 'Email secara otomatis dibersihkan dalam 48 jam untuk menjaga kebersihan data dan privasi pengguna.',
     },
     {
       q: 'Apakah Kilat Mail 100% gratis?',
@@ -223,7 +243,7 @@ export function App() {
         <EmailBar
           email={currentEmail}
           domain={domain}
-          availableDomains={AVAILABLE_DOMAINS}
+          availableDomains={availableDomains}
           isRefreshing={isRefreshing}
           onRefresh={() => loadInbox(true)}
           onRandomize={handleRandomize}
@@ -232,7 +252,7 @@ export function App() {
           onOpenQr={() => setIsQrOpen(true)}
         />
 
-        {/* Simulator Test Action (Discreet helper) */}
+        {/* Simulator Test Action */}
         <div className="flex justify-end mb-4 -mt-3">
           <button
             onClick={handleInjectTest}
@@ -326,9 +346,9 @@ export function App() {
 
             <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
               <Zap className="w-5 h-5 text-emerald-400 mb-2" />
-              <h3 className="text-sm font-bold text-zinc-100 mb-1">Cloudflare Edge Fast</h3>
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">Live Ingestion Fast</h3>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Ditenagai Cloudflare Email Routing & Workers global dengan auto-purge 48 jam.
+                Penerimaan email realtime dengan pembersihan berkala otomatis.
               </p>
             </div>
           </div>
@@ -352,14 +372,14 @@ export function App() {
                 # 1. Fetch Inbox Messages
               </div>
               <div className="text-emerald-400 font-mono select-all">
-                GET https://kilat-mail-worker.zzdree.workers.dev/api/inbox?email={currentEmail}
+                GET https://api.mail.tm/messages (dengan Bearer token)
               </div>
 
               <div className="text-zinc-500 font-sans text-[11px] font-bold uppercase tracking-wider pt-2">
                 # 2. Fetch Single Message Detail
               </div>
               <div className="text-emerald-400 font-mono select-all">
-                GET https://kilat-mail-worker.zzdree.workers.dev/api/message/:id
+                GET https://api.mail.tm/messages/:id
               </div>
             </div>
           </div>

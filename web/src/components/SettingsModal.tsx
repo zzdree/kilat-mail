@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, Server, Globe } from 'lucide-react';
-import { getApiBaseUrl, setApiBaseUrl } from '../api';
+import { X, Save, Globe } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -15,7 +14,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   currentDomain,
   onSaveDomain,
 }) => {
-  const [apiUrl, setApiUrl] = useState(getApiBaseUrl());
   const [domainInput, setDomainInput] = useState(currentDomain);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -23,7 +21,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    setApiBaseUrl(apiUrl.trim());
     onSaveDomain(domainInput.trim());
     setSavedSuccess(true);
     setTimeout(() => {
@@ -33,60 +30,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-pop">
-      <div className="bg-[#111827] border border-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
-        <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-md p-6 shadow-2xl relative">
+        <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-800">
           <div className="flex items-center gap-2">
-            <Server className="w-5 h-5 text-amber-500" />
-            <h3 className="font-bold text-base text-white">Pengaturan Kilat Mail</h3>
+            <Globe className="w-5 h-5 text-emerald-400" />
+            <h3 className="font-bold text-base text-zinc-100">Pengaturan Domain</h3>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-1 rounded-lg">
+          <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSave} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Server className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Cloudflare Worker API URL</span>
-            </label>
-            <input
-              type="text"
-              placeholder="https://kilat-mail-worker.username.workers.dev"
-              value={apiUrl}
-              onChange={(e) => setApiUrl(e.target.value)}
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder:text-gray-600 focus:outline-none focus:border-amber-500"
-            />
-            <p className="text-[11px] text-gray-500 mt-1">
-              Kosongkan untuk menggunakan <em>Local Mock Demo Mode</em> di browser.
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-amber-400" />
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-emerald-400" />
               <span>Domain Email Aktif</span>
             </label>
             <input
               type="text"
-              placeholder="domainanda.eu.org"
+              placeholder="emalupe.com"
               value={domainInput}
               onChange={(e) => setDomainInput(e.target.value.toLowerCase())}
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder:text-gray-600 focus:outline-none focus:border-amber-500"
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-zinc-100 font-mono placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500"
             />
-            <p className="text-[11px] text-gray-500 mt-1">
-              Domain yang sudah dikonfigurasi di Cloudflare Email Routing.
-            </p>
           </div>
 
           <div className="pt-2 flex items-center justify-end gap-2">
-            <button type="button" onClick={onClose} className="btn-secondary !py-2 !px-4 text-xs">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold"
+            >
               Batal
             </button>
-            <button type="submit" className="btn-primary !py-2 !px-4 text-xs">
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold flex items-center gap-1.5"
+            >
               <Save className="w-3.5 h-3.5" />
-              <span>{savedSuccess ? 'Tersimpan!' : 'Simpan Pengaturan'}</span>
+              <span>{savedSuccess ? 'Tersimpan!' : 'Simpan'}</span>
             </button>
           </div>
         </form>
