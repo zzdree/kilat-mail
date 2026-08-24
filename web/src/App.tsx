@@ -3,28 +3,24 @@ import { Header } from './components/Header';
 import { EmailBar } from './components/EmailBar';
 import { InboxList } from './components/InboxList';
 import { MessageDetail } from './components/MessageDetail';
-import { SettingsModal } from './components/SettingsModal';
-import { SetupGuideModal } from './components/SetupGuideModal';
 import { QrModal } from './components/QrModal';
-import { HowItWorks } from './components/HowItWorks';
-import { CtaBanner } from './components/CtaBanner';
 import { InboxItem, MessageDetail as IMessageDetail } from './types';
 import { fetchInbox, fetchMessage, deleteMessage, clearInbox, injectTestEmail } from './api';
 import {
   ShieldCheck,
   Zap,
   KeyRound,
+  Trash2,
   HelpCircle,
   ChevronDown,
   ChevronUp,
-  Mail,
-  Trash2,
-  Clock,
+  Sparkles,
+  ArrowRight,
+  Shield,
   ExternalLink,
 } from 'lucide-react';
 
 const DEFAULT_DOMAIN = 'kilat.eu.org';
-const AVAILABLE_DOMAINS = ['kilat.eu.org', 'temp.kilat.eu.org', 'inbox.kilat.eu.org'];
 
 function generateRandomEmail(domain: string): string {
   const randomChars = Math.random().toString(36).substring(2, 8);
@@ -32,9 +28,7 @@ function generateRandomEmail(domain: string): string {
 }
 
 export function App() {
-  const [domain, setDomain] = useState<string>(() => {
-    return localStorage.getItem('kilat_mail_domain') || DEFAULT_DOMAIN;
-  });
+  const [domain] = useState<string>(DEFAULT_DOMAIN);
 
   const [currentEmail, setCurrentEmail] = useState<string>(() => {
     const saved = localStorage.getItem('kilat_mail_current_address');
@@ -51,44 +45,27 @@ export function App() {
   const [isLoadingInbox, setIsLoadingInbox] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isQrOpen, setIsQrOpen] = useState(false);
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
   const faqs = [
     {
-      q: 'Apakah Kilat Mail benar-benar 100% gratis?',
-      a: 'Ya, Kilat Mail dibangun sepenuhnya di atas tier gratis Cloudflare Serverless (Email Routing, Workers, D1 SQLite, dan Pages) tanpa biaya langganan, tanpa iklan mengganggu, dan tanpa batasan.',
+      q: 'Apa itu Kilat Mail?',
+      a: 'Kilat Mail adalah layanan email sekali pakai (disposable email) gratis yang memungkinkan kamu menerima email dan kode verifikasi (OTP) secara instan tanpa perlu registrasi atau membocorkan email pribadimu.',
     },
     {
-      q: 'Berapa lama email yang masuk akan disimpan?',
-      a: 'Email secara otomatis disimpan di database edge D1 dan dibersihkan otomatis dalam 48 jam oleh cron trigger pembersih otomatis.',
+      q: 'Berapa lama email yang masuk disimpan?',
+      a: 'Email yang masuk akan otomatis dihapus oleh sistem setelah 48 jam untuk memastikan privasi dan kebersihan data.',
     },
     {
-      q: 'Bagaimana cara kerja Smart OTP Extractor?',
-      a: 'Algoritma cerdas kami secara otomatis memindai pesan untuk mendeteksi digit kode verifikasi / 2FA (4-8 karakter), lalu menyajikannya dalam tombol 1-klik salin tanpa perlu membaca email secara manual.',
+      q: 'Apakah layanan ini gratis?',
+      a: 'Ya, Kilat Mail 100% gratis digunakan kapan saja tanpa batasan jumlah penerimaan email.',
     },
     {
-      q: 'Bisakah saya menggunakan domain pribadi saya sendiri?',
-      a: 'Tentu! Anda bisa membuka menu "Domain" atau "Panduan" di navigasi atas untuk menghubungkan domain Cloudflare Email Routing milik Anda sendiri.',
-    },
-    {
-      q: 'Apakah saya perlu registrasi akun atau login?',
-      a: 'Tidak perlu sama sekali! Buka halaman ini dan alamat email langsung siap pakai seketika. Privasi Anda terjaga 100%.',
+      q: 'Bagaimana cara menyalin kode OTP dengan cepat?',
+      a: 'Sistem pintar Kilat Mail secara otomatis mendeteksi kode verifikasi/OTP di dalam subjek dan isi email, lalu memunculkan tombol 1-klik salin langsung di daftar kotak masuk.',
     },
   ];
-
-  const handleSaveDomain = (newDomain: string) => {
-    const cleanDomain = newDomain || DEFAULT_DOMAIN;
-    setDomain(cleanDomain);
-    localStorage.setItem('kilat_mail_domain', cleanDomain);
-    const username = currentEmail.split('@')[0];
-    const updated = `${username}@${cleanDomain}`;
-    setCurrentEmail(updated);
-    localStorage.setItem('kilat_mail_current_address', updated);
-  };
 
   const handleRandomize = () => {
     const fresh = generateRandomEmail(domain);
@@ -122,7 +99,7 @@ export function App() {
         console.error('Error fetching inbox:', err);
       } finally {
         if (isManual) {
-          setTimeout(() => setIsRefreshing(false), 400);
+          setTimeout(() => setIsRefreshing(false), 300);
         }
       }
     },
@@ -183,7 +160,7 @@ export function App() {
   };
 
   const handleClearAll = async () => {
-    if (!confirm('Yakin ingin mengosongkan semua pesan di inbox ini?')) return;
+    if (!confirm('Kosongkan semua pesan di inbox ini?')) return;
     try {
       await clearInbox(currentEmail);
       setInboxItems([]);
@@ -201,53 +178,46 @@ export function App() {
     setSelectedId(created.id);
   };
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   return (
-    <div className="min-h-screen w-full bg-[#0B0F19] text-gray-100 flex flex-col items-center selection:bg-amber-500 selection:text-black">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center">
       {/* Header */}
-      <Header
-        isLive={true}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenGuide={() => setIsGuideOpen(true)}
-      />
+      <Header isLive={true} />
 
       {/* Main Container */}
-      <main className="flex-1 w-full max-w-3xl px-4 py-6 sm:py-10 flex flex-col">
-        {/* Hero Section */}
-        <div className="text-center mb-6 sm:mb-8">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] sm:text-xs font-semibold mb-3.5 shadow-sm">
-            <Zap className="w-3.5 h-3.5 fill-amber-400 shrink-0" />
-            <span>Gratis • Tanpa Registrasi • Auto Smart OTP</span>
-          </div>
-
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mb-2.5 leading-tight">
-            Email Sementara <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500">Super Cepat</span>
+      <main className="w-full max-w-3xl px-4 py-8 sm:py-10 flex-1 flex flex-col">
+        {/* Title Area */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">
+            Email Sementara Gratis & Cepat
           </h1>
-
-          <p className="text-xs sm:text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
-            Terima kode OTP instan & lindungi privasi email utama kamu dari spam dan data tracker.
+          <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
+            Lupakan spam, iklan promosi, dan bot. Lindungi email aslimu dengan email sekali pakai yang aman.
           </p>
         </div>
 
-        {/* Email Bar Widget Hero */}
+        {/* Email Bar (Hero Functional Component) */}
         <EmailBar
           email={currentEmail}
-          domain={domain}
-          availableDomains={AVAILABLE_DOMAINS}
           isRefreshing={isRefreshing}
           onRefresh={() => loadInbox(true)}
           onRandomize={handleRandomize}
           onChangeUsername={handleChangeUsername}
-          onSelectDomain={handleSaveDomain}
-          onInjectTest={handleInjectTest}
           onOpenQr={() => setIsQrOpen(true)}
         />
 
-        {/* Inbox Stream OR Message Reader */}
-        <div className="mb-10 w-full transition-all">
+        {/* Simulator Test Action (Discreet helper) */}
+        <div className="flex justify-end mb-4 -mt-3">
+          <button
+            onClick={handleInjectTest}
+            className="text-[11px] text-slate-500 hover:text-amber-400 flex items-center gap-1 transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-3 h-3" />
+            <span>Simulasi Kirim Email Uji Coba</span>
+          </button>
+        </div>
+
+        {/* Inbox List / Message Detail */}
+        <div className="mb-12">
           {selectedMessage || isLoadingDetail ? (
             <MessageDetail
               message={selectedMessage}
@@ -270,170 +240,134 @@ export function App() {
           )}
         </div>
 
-        {/* How It Works (3 Steps) */}
-        <HowItWorks />
+        {/* How It Works Section */}
+        <section id="cara-kerja" className="mb-12 border-t border-slate-800/80 pt-8">
+          <h2 className="text-base sm:text-lg font-bold text-white mb-4 text-center">
+            Bagaimana Cara Kerjanya?
+          </h2>
 
-        {/* Value Props / Features */}
-        <section id="fitur" className="pt-8 border-t border-gray-800/80 w-full">
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-2.5">
-              <span>Keunggulan Utama</span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-white mb-1.5">
-              Fitur Unggulan Kilat Mail
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-400 max-w-md mx-auto">
-              Dirancang dengan presisi untuk kecepatan maksimal dan keamanan privasi pengunjung.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <div className="bg-[#111827] border border-gray-800/90 rounded-2xl p-5 hover:border-amber-500/40 transition-colors shadow-lg group">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3.5 group-hover:scale-105 transition-transform">
-                <KeyRound className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm sm:text-base font-bold text-white mb-1">Smart OTP Extractor</h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Algoritma regex cerdas mendeteksi kode verifikasi secara otomatis untuk disalin langsung dalam 1 klik.
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <div className="text-xs font-mono font-bold text-amber-400 mb-1">LANGKAH 01</div>
+              <h3 className="text-sm font-bold text-white mb-1">Salin Alamat</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Salin alamat email sementara yang sudah dibuat secara otomatis di atas.
               </p>
             </div>
 
-            <div className="bg-[#111827] border border-gray-800/90 rounded-2xl p-5 hover:border-cyan-500/40 transition-colors shadow-lg group">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-3.5 group-hover:scale-105 transition-transform">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm sm:text-base font-bold text-white mb-1">100% Privasi & Bersih</h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Tanpa registrasi, tanpa pelacakan data, dan konten HTML dibersihkan anti-XSS dengan DOMPurify.
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <div className="text-xs font-mono font-bold text-amber-400 mb-1">LANGKAH 02</div>
+              <h3 className="text-sm font-bold text-white mb-1">Gunakan di Mana Saja</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Gunakan alamat ini untuk mendaftar di situs web, forum, atau aplikasi.
               </p>
             </div>
 
-            <div className="bg-[#111827] border border-gray-800/90 rounded-2xl p-5 hover:border-emerald-500/40 transition-colors shadow-lg group">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3.5 group-hover:scale-105 transition-transform">
-                <Zap className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm sm:text-base font-bold text-white mb-1">Cloudflare Edge</h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Infrastruktur serverless global Cloudflare Email Routing & Workers untuk latensi penerimaan zero-lag.
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <div className="text-xs font-mono font-bold text-amber-400 mb-1">LANGKAH 03</div>
+              <h3 className="text-sm font-bold text-white mb-1">Baca Pesan & OTP</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Pesan masuk akan langsung muncul di kotak masuk ini secara realtime.
               </p>
             </div>
           </div>
         </section>
 
-        {/* CTA Banner */}
-        <CtaBanner onScrollToTop={scrollToTop} />
+        {/* Features Section */}
+        <section id="fitur" className="mb-12 border-t border-slate-800/80 pt-8">
+          <h2 className="text-base sm:text-lg font-bold text-white mb-4 text-center">
+            Mengapa Menggunakan Kilat Mail?
+          </h2>
 
-        {/* FAQ Section */}
-        <section id="faq" className="w-full pt-4">
-          <div className="bg-[#111827] border border-gray-800 rounded-3xl p-5 sm:p-7 mb-8 shadow-xl">
-            <div className="text-center sm:text-left mb-5">
-              <h3 className="text-base sm:text-lg font-bold text-white mb-1 flex items-center justify-center sm:justify-start gap-2">
-                <HelpCircle className="w-4 h-4 text-amber-400" />
-                <span>Pertanyaan yang Sering Diajukan (FAQ)</span>
-              </h3>
-              <p className="text-xs text-gray-400">
-                Informasi seputar cara kerja, privasi, dan batasan layanan Kilat Mail.
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <KeyRound className="w-5 h-5 text-amber-400 mb-2" />
+              <h3 className="text-sm font-bold text-white mb-1">Ekstraksi OTP Otomatis</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Deteksi otomatis kode OTP atau PIN aktivasi sehingga kamu bisa menyalinnya dengan 1 klik.
               </p>
             </div>
 
-            <div className="space-y-2.5">
-              {faqs.map((faq, index) => {
-                const isOpen = openFaqIndex === index;
-                return (
-                  <div
-                    key={index}
-                    className="border border-gray-800/80 rounded-xl overflow-hidden bg-[#0B0F19]/60 transition-colors"
-                  >
-                    <button
-                      onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                      className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-3 text-xs sm:text-sm font-semibold text-gray-200 hover:text-amber-400 transition-colors cursor-pointer"
-                    >
-                      <span>{faq.q}</span>
-                      {isOpen ? (
-                        <ChevronUp className="w-4 h-4 text-amber-400 shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />
-                      )}
-                    </button>
-                    {isOpen && (
-                      <div className="px-4 pb-3.5 pt-1 text-xs text-gray-400 leading-relaxed border-t border-gray-800/60 animate-fade-in">
-                        {faq.a}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <ShieldCheck className="w-5 h-5 text-emerald-400 mb-2" />
+              <h3 className="text-sm font-bold text-white mb-1">Tanpa Registrasi</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Tanpa username, tanpa password, dan tanpa pelacakan cookie pribadi apapun.
+              </p>
             </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <Zap className="w-5 h-5 text-amber-400 mb-2" />
+              <h3 className="text-sm font-bold text-white mb-1">Cepat & Aman</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Ditenagai jaringan edge serverless global dengan pembersihan otomatis 48 jam.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section id="faq" className="mb-8 border-t border-slate-800/80 pt-8">
+          <h2 className="text-base sm:text-lg font-bold text-white mb-4 text-center">
+            Pertanyaan Umum (FAQ)
+          </h2>
+
+          <div className="space-y-2">
+            {faqs.map((faq, index) => {
+              const isOpen = openFaqIndex === index;
+              return (
+                <div
+                  key={index}
+                  className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden"
+                >
+                  <button
+                    onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                    className="w-full px-4 py-3 text-left flex items-center justify-between gap-2 text-xs sm:text-sm font-semibold text-slate-200 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <span>{faq.q}</span>
+                    {isOpen ? (
+                      <ChevronUp className="w-4 h-4 text-amber-400 shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+                    )}
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-3 pt-1 text-xs text-slate-400 leading-relaxed border-t border-slate-800/60">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-gray-800/80 py-8 px-4 text-xs text-gray-500 bg-[#0B0F19]">
-        <div className="max-w-3xl mx-auto flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                <Zap className="w-3.5 h-3.5 fill-amber-400" />
-              </div>
-              <span className="font-bold text-gray-200 text-sm">⚡ Kilat Mail</span>
-              <span className="text-gray-500">• Serverless Cloudflare Edge</span>
-            </div>
-
-            <div className="flex items-center gap-4 text-xs">
-              <a
-                href="#fitur"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                Fitur
-              </a>
-              <a
-                href="#cara-kerja"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                Cara Kerja
-              </a>
-              <a
-                href="#faq"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                FAQ
-              </a>
-              <a
-                href="https://github.com/zzdree/kilat-mail"
-                target="_blank"
-                rel="noreferrer"
-                className="text-amber-400 hover:underline flex items-center gap-1 font-medium"
-              >
-                <span>GitHub</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
+      <footer className="w-full border-t border-slate-800 py-6 px-4 text-xs text-slate-500 bg-slate-950">
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-300">Kilat Mail</span>
+            <span>— Layanan Email Sementara Gratis</span>
           </div>
 
-          <div className="pt-4 border-t border-gray-800/60 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-gray-600">
-            <span>© 2026 Kilat Mail by Andreas Restuawanta Christwara. MIT Licensed.</span>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-              <span className="text-gray-400">Semua sistem operasional</span>
-            </div>
+          <div className="flex items-center gap-4 text-slate-400">
+            <a href="#fitur" className="hover:text-slate-200">Fitur</a>
+            <a href="#cara-kerja" className="hover:text-slate-200">Cara Kerja</a>
+            <a href="#faq" className="hover:text-slate-200">FAQ</a>
+            <a
+              href="https://github.com/zzdree/kilat-mail"
+              target="_blank"
+              rel="noreferrer"
+              className="text-amber-400 hover:underline"
+            >
+              GitHub
+            </a>
           </div>
         </div>
       </footer>
 
-      {/* Modals */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        currentDomain={domain}
-        onSaveDomain={handleSaveDomain}
-      />
-
-      <SetupGuideModal
-        isOpen={isGuideOpen}
-        onClose={() => setIsGuideOpen(false)}
-      />
-
+      {/* QR Modal */}
       <QrModal
         isOpen={isQrOpen}
         onClose={() => setIsQrOpen(false)}
