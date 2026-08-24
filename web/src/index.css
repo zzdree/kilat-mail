@@ -24,17 +24,15 @@
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+html, body, #root {
+  width: 100%;
+  min-height: 100vh;
 }
 
 body {
   font-family: var(--font-sans);
   background-color: var(--color-bg-dark);
   color: var(--color-text-primary);
-  min-height: 100vh;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
