@@ -15,7 +15,7 @@ const LOCAL_MOCK_STORAGE_KEY = 'kilat_mail_local_inbox';
 
 const MAIL_TM_API = 'https://api.mail.tm';
 const GUERRILLA_API = 'https://api.guerrillamail.com/ajax.php';
-const CLOUDFLARE_WORKER_API = 'https://kilat-mail-worker.zzdree.workers.dev';
+export const CLOUDFLARE_WORKER_API = 'https://kilat-mail-worker.zzdree.workers.dev';
 const FIXED_PASSWORD = 'KilatMailSecurePass123!';
 
 export const REAL_AVAILABLE_DOMAINS = [
@@ -53,27 +53,99 @@ export function getProviderForDomain(domain: string): 'mailtm' | 'guerrilla' | '
  * Ekstraksi kode OTP dari teks / subjek
  */
 export function extractOtpFromText(subject?: string | null, body?: string | null): string | null {
-  const textToScan = `${subject || ''} ${body || ''}`;
+  const textToScan = `${subject || ''}\n${body || ''}`;
   if (!textToScan.trim()) return null;
 
   const patterns = [
-    /(?:kode|code|otp|pin|verifikasi|verification|token)\s*(?:is|adalah|:|\s)\s*([0-9]{4,8})/i,
-    /(?:is|adalah)\s*([0-9]{4,8})/i,
-    /\b([0-9]{6})\b/,
-    /\b([0-9]{4,8})\b/,
+    /(?:kode\s+verifikasi|verification\s+code|security\s+code|confirmation\s+code|kode\s+konfirmasi|kode\s+keamanan|otp(?:\s+code)?|passcode|pin|login\s+code|access\s+code|auth\s+code|validation\s+code)[\s:=#*\-_—–]+([0-9]{3,4}[-\s]?[0-9]{3,4}|[0-9]{4,8}|[A-Z0-9]{5,8})\b/i,
+    /(?:enter|masukkan|gunakan|use|your\s+code\s+is|kode\s+anda\s+adalah|kode\s+kamu\s+adalah)[\s:=#*\-_—–]+([0-9]{3,4}[-\s]?[0-9]{3,4}|[0-9]{4,8}|[A-Z0-9]{5,8})\b/i,
+    /\[([0-9]{4,8}|[A-Z0-9]{5,8})\](?:\s+is\s+your|\s+adalah\s+kode|\s+to\s+verify)/i,
+    /(?:kode|code|otp|pin)[\s:=#*\-_—–]+([0-9]{3}[-\s][0-9]{3})/i,
+    /\b([A-Z]-[0-9]{4,8})\b/i,
   ];
 
   for (const regex of patterns) {
     const match = textToScan.match(regex);
     if (match && match[1]) {
-      const code = match[1];
+      const code = match[1].replace(/[-\s]/g, '').trim();
       const yearNum = parseInt(code, 10);
-      if (code.length === 4 && yearNum >= 2020 && yearNum <= 2030) continue;
+      if (code.length === 4 && yearNum >= 2020 && yearNum <= 2035 && !/kode|code|otp|pin/i.test(regex.source)) {
+        continue;
+      }
       return code;
     }
   }
 
+  // Fallback: 4-8 digit standalone
+  if (subject) {
+    const subjectMatch = subject.match(/\b([0-9]{4,8})\b/);
+    if (subjectMatch && subjectMatch[1]) {
+      const num = parseInt(subjectMatch[1], 10);
+      if (!(subjectMatch[1].length === 4 && num >= 2020 && num <= 2035)) {
+        return subjectMatch[1];
+      }
+    }
+  }
+
   return null;
+}
+
+/**
+ * Ekstraksi Magic Link / URL Verifikasi
+ */
+export function extractMagicLinkFromContent(html?: string | null, text?: string | null): string | null {
+  const htmlContent = html || '';
+  const textContent = text || '';
+
+  // 1. Dari HTML Anchor Tags
+  if (htmlContent) {
+    const anchorRegex = /<a\s+[^>]*href=["'](https?:\/\/[^"']+)["'][^>]*>(.*?)<\/a>/gis;
+    let match;
+    const candidates: { url: string; score: number }[] = [];
+
+    while ((match = anchorRegex.exec(htmlContent)) !== null) {
+      const url = match[1];
+      const anchorText = match[2].replace(/<[^>]*>/g, '').trim().toLowerCase();
+      let score = 0;
+
+      if (/unsubscribe|optout|opt-out|privacy|terms|twitter\.com|facebook\.com|instagram\.com|linkedin\.com/i.test(url) ||
+          /unsubscribe|berhenti berlangganan/i.test(anchorText)) {
+        continue;
+      }
+
+      if (/verif|confirm|activat|konfirmasi|verifikasi|aktivasi|login|sign in|masuk|click here|klik di sini|complete|get started/i.test(anchorText)) {
+        score += 10;
+      }
+      if (/verify|confirm|activate|magic[-_]?link|token=|token\/|code=|auth\/|validate/i.test(url)) {
+        score += 8;
+      }
+
+      if (score > 0) {
+        candidates.push({ url, score });
+      }
+    }
+
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.score - a.score);
+      return cleanUrl(candidates[0].url);
+    }
+  }
+
+  // 2. Dari Plain Text URLs
+  const urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
+  const textUrls = textContent.match(urlRegex) || [];
+  for (const rawUrl of textUrls) {
+    if (/unsubscribe|optout|privacy|terms/i.test(rawUrl)) continue;
+    if (/verify|confirm|activate|magic[-_]?link|token=|code=|auth\/|signup\/confirm/i.test(rawUrl)) {
+      return cleanUrl(rawUrl);
+    }
+  }
+
+  return null;
+}
+
+function cleanUrl(url: string): string {
+  return url.replace(/[.,;:)\]>]+$/, '').trim();
 }
 
 // ----------------------------------------------------
@@ -141,6 +213,7 @@ async function fetchMailTmInbox(email: string): Promise<InboxItem[]> {
     sender_address: m.from?.address || 'unknown@domain.com',
     subject: m.subject || '(Tanpa Subjek)',
     detected_otp: extractOtpFromText(m.subject, m.intro),
+    magic_link: extractMagicLinkFromContent(null, m.intro),
     raw_size: m.size || 0,
     is_read: m.seen ? 1 : 0,
     created_at: m.createdAt || new Date().toISOString(),
@@ -179,6 +252,7 @@ async function fetchMailTmDetail(rawId: string): Promise<MessageDetail> {
     body_text: bodyText,
     body_html: bodyHtml,
     detected_otp: extractOtpFromText(m.subject, bodyText),
+    magic_link: extractMagicLinkFromContent(bodyHtml, bodyText),
     raw_size: m.size || 0,
     is_read: 1,
     created_at: m.createdAt || new Date().toISOString(),
@@ -229,6 +303,7 @@ async function fetchGuerrillaInbox(email: string): Promise<InboxItem[]> {
       sender_address: m.mail_from || 'unknown@sender.com',
       subject: m.mail_subject || '(Tanpa Subjek)',
       detected_otp: extractOtpFromText(m.mail_subject, m.mail_excerpt),
+      magic_link: extractMagicLinkFromContent(null, m.mail_excerpt),
       raw_size: parseInt(m.mail_size || '0', 10),
       is_read: m.mail_read ? 1 : 0,
       created_at: new Date(parseInt(m.mail_timestamp || `${Date.now() / 1000}`, 10) * 1000).toISOString(),
@@ -257,6 +332,7 @@ async function fetchGuerrillaDetail(rawId: string): Promise<MessageDetail> {
     body_text: bodyText,
     body_html: bodyHtml,
     detected_otp: extractOtpFromText(m.mail_subject, bodyHtml || bodyText),
+    magic_link: extractMagicLinkFromContent(bodyHtml, bodyText),
     raw_size: parseInt(m.mail_size || '0', 10),
     is_read: 1,
     created_at: new Date(parseInt(m.mail_timestamp || `${Date.now() / 1000}`, 10) * 1000).toISOString(),
@@ -412,25 +488,33 @@ function getLocalMockMessages(email: string): MessageDetail[] {
 }
 
 export function injectTestEmail(email: string, otpCode = '749201'): MessageDetail {
+  const magicLink = `https://github.com/login/oauth/authorize?client_id=kilat_app&state=demo_${Date.now()}&confirm=true`;
   const mockMsg: MessageDetail = {
     id: `mock-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     recipient: email.toLowerCase(),
     sender_name: 'GitHub Security',
     sender_address: 'noreply@github.com',
     subject: `[GitHub] Kode verifikasi akun Anda adalah ${otpCode}`,
-    body_text: `Halo,\n\nGunakan kode verifikasi berikut untuk menyelesaikan proses autentikasi Anda:\n\nKode Verifikasi: ${otpCode}\n\nKode ini berlaku selama 10 menit. Jangan bagikan kode ini kepada siapapun.\n\nSalam,\nTim Keamanan GitHub`,
+    body_text: `Halo,\n\nGunakan kode verifikasi berikut untuk menyelesaikan proses autentikasi Anda:\n\nKode Verifikasi: ${otpCode}\n\nAtau klik tautan konfirmasi langsung:\n${magicLink}\n\nKode ini berlaku selama 10 menit. Jangan bagikan kode ini kepada siapapun.\n\nSalam,\nTim Keamanan GitHub`,
     body_html: `
-      <div style="font-family: sans-serif; padding: 20px; background: #18181b; color: #f4f4f5; border-radius: 8px;">
+      <div style="font-family: sans-serif; padding: 24px; background: #18181b; color: #f4f4f5; border-radius: 12px; border: 1px solid #27272a;">
         <h2 style="color: #34d399; margin-bottom: 16px;">Verifikasi Akun GitHub</h2>
         <p>Gunakan kode verifikasi berikut untuk menyelesaikan proses autentikasi akun Anda:</p>
-        <div style="background: #27272a; border: 1px solid #3f3f46; padding: 16px; text-align: center; border-radius: 6px; margin: 20px 0;">
-          <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #34d399;">${otpCode}</span>
+        <div style="background: #27272a; border: 1px solid #3f3f46; padding: 18px; text-align: center; border-radius: 8px; margin: 20px 0;">
+          <span style="font-size: 34px; font-weight: bold; letter-spacing: 6px; color: #34d399;">${otpCode}</span>
         </div>
-        <p style="color: #a1a1aa; font-size: 13px;">Kode ini hanya berlaku selama 10 menit. Abaikan email ini jika Anda tidak merasa memintanya.</p>
+        <p style="margin-bottom: 16px;">Atau konfirmasi langsung dengan 1-klik di bawah ini:</p>
+        <div style="text-align: center; margin: 16px 0;">
+          <a href="${magicLink}" target="_blank" style="display: inline-block; background: #059669; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+            Aktivasi & Masuk Akun Sekarang ↗
+          </a>
+        </div>
+        <p style="color: #a1a1aa; font-size: 13px; margin-top: 24px; border-top: 1px solid #27272a; padding-top: 12px;">Kode ini hanya berlaku selama 10 menit. Abaikan email ini jika Anda tidak merasa memintanya.</p>
       </div>
     `,
     detected_otp: otpCode,
-    raw_size: 1420,
+    magic_link: magicLink,
+    raw_size: 1620,
     is_read: 0,
     created_at: new Date().toISOString(),
   };

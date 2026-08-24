@@ -27,9 +27,13 @@ import {
   Code2,
   Terminal,
   ExternalLink,
+  Bot,
+  Bell,
+  MailCheck,
 } from 'lucide-react';
 
 const RECENT_EMAILS_STORAGE_KEY = 'kilat_mail_recent_addresses';
+const ACTIVE_MAILBOXES_STORAGE_KEY = 'kilat_mail_active_mailboxes';
 
 function generateRandomEmail(domain: string): string {
   const randomChars = Math.random().toString(36).substring(2, 8);
@@ -40,6 +44,9 @@ function generateRandomEmail(domain: string): string {
 function playChimeSound() {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
@@ -70,6 +77,18 @@ export function App() {
     return initial;
   });
 
+  // Multiple active mailboxes tabs
+  const [activeMailboxes, setActiveMailboxes] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(ACTIVE_MAILBOXES_STORAGE_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(list) && list.length > 0) return list;
+      return [currentEmail];
+    } catch {
+      return [currentEmail];
+    }
+  });
+
   // Riwayat 5 alamat email terakhir
   const [recentEmails, setRecentEmails] = useState<string[]>(() => {
     try {
@@ -91,14 +110,20 @@ export function App() {
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
+  // Desktop Notifications
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => {
+    return typeof Notification !== 'undefined' ? Notification.permission : 'default';
+  });
+
   const prevInboxLength = useRef<number>(0);
   const isDocumentVisible = useRef<boolean>(true);
   const currentProvider = getProviderForDomain(domain);
 
-  // Ambil latest OTP dari pesan masuk
+  // Ambil latest OTP & Magic Link dari pesan masuk
   const latestOtp = inboxItems.find((i) => Boolean(i.detected_otp))?.detected_otp || '';
+  const latestMagicLink = inboxItems.find((i) => Boolean(i.magic_link))?.magic_link || '';
 
-  // Simpan ke Recent Mailboxes History setiap kali email berganti
+  // Simpan ke Recent Mailboxes History & Active Mailboxes setiap kali email berganti
   useEffect(() => {
     if (!currentEmail) return;
     setRecentEmails((prev) => {
@@ -107,23 +132,64 @@ export function App() {
       localStorage.setItem(RECENT_EMAILS_STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
+
+    setActiveMailboxes((prev) => {
+      if (!prev.some((e) => e.toLowerCase() === currentEmail.toLowerCase())) {
+        const updated = [...prev, currentEmail].slice(0, 4);
+        localStorage.setItem(ACTIVE_MAILBOXES_STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      }
+      return prev;
+    });
   }, [currentEmail]);
 
-  // Tab Title Flashing saat ada pesan baru
+  // Tab Title Flashing saat ada pesan baru / OTP
   useEffect(() => {
     if (latestOtp) {
       document.title = `(${inboxItems.length}) 🔑 OTP: ${latestOtp} - Kilat Mail ⚡`;
+    } else if (latestMagicLink) {
+      document.title = `(${inboxItems.length}) 🔗 Link Aktivasi - Kilat Mail ⚡`;
     } else if (inboxItems.length > 0) {
       document.title = `(${inboxItems.length}) ✉️ Email Masuk - Kilat Mail ⚡`;
     } else {
       document.title = 'Kilat Mail ⚡ — Instant & Serverless Temporary Email';
     }
-  }, [inboxItems, latestOtp]);
+  }, [inboxItems, latestOtp, latestMagicLink]);
 
-  // Audio notification saat ada email baru mendarat
+  // Request Desktop Notification Permission
+  const handleRequestNotification = async () => {
+    if (typeof Notification === 'undefined') {
+      alert('Browser Anda tidak mendukung Web Notification API.');
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    setNotificationPermission(perm);
+  };
+
+  // Trigger Notification & Audio saat ada email baru mendarat
   useEffect(() => {
     if (inboxItems.length > prevInboxLength.current && prevInboxLength.current !== 0) {
       playChimeSound();
+
+      // Kirim browser desktop notification
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        const newest = inboxItems[0];
+        const title = newest.detected_otp
+          ? `🔑 Kode OTP: ${newest.detected_otp}`
+          : newest.magic_link
+          ? `🔗 Link Verifikasi Diterima`
+          : `✉️ Email Baru Masuk`;
+
+        const body = `${newest.sender_name || newest.sender_address}: ${newest.subject || '(Tanpa Subjek)'}`;
+        try {
+          new Notification(title, {
+            body,
+            icon: '/icon-192.svg',
+          });
+        } catch {
+          // Notification failed
+        }
+      }
     }
     prevInboxLength.current = inboxItems.length;
   }, [inboxItems]);
@@ -131,23 +197,27 @@ export function App() {
   const faqs = [
     {
       q: 'Apa itu Kilat Mail?',
-      a: 'Kilat Mail adalah layanan email sementara (disposable temporary email) gratis untuk menerima pesan dan kode verifikasi OTP secara instan tanpa perlu registrasi.',
+      a: 'Kilat Mail adalah platform email sekali pakai (disposable temporary email) gratis berkecepatan tinggi dengan ekstraksi otomatis kode OTP/2FA dan tautan verifikasi akun secara instan tanpa perlu registrasi.',
+    },
+    {
+      q: 'Bagaimana fitur Smart OTP & Magic Link bekerja?',
+      a: 'Sistem menggunakan regex kontekstual cerdas dan parser HTML untuk langsung mengenali kode 4-8 digit OTP dan tombol/tautan konfirmasi, menampilkannya di kartu sorotan teratas untuk disalin dengan 1 klik.',
+    },
+    {
+      q: 'Apakah bisa digunakan untuk Bot, Scraper, Playwright, dan AI Agent?',
+      a: 'Sangat bisa! Kilat Mail menyediakan atribut DOM semantik (#kilat-hub[data-email], [data-latest-otp]) serta REST API publik ringan /api/otp?email=... dan /api/latest?email=... untuk otomatisasi Python, Selenium, Playwright, dan cURL.',
     },
     {
       q: 'Bagaimana status domain @kilat.eu.org, @kilat.us.kg, @kilat.pp.ua?',
-      a: 'Domain-domain tersebut sudah terdaftar di zona Cloudflare. Begitu delegasi NS selesai, Email Routing otomatis mengalirkan email ke database D1 SQLite edge.',
+      a: 'Domain-domain tersebut sudah terdaftar di zona Cloudflare. Begitu delegasi DNS selesai, Email Routing otomatis mengalirkan email ke database D1 SQLite edge.',
     },
     {
       q: 'Apakah saya bisa memilih domain lain yang langsung aktif?',
-      a: 'Bisa! Kami menyediakan pilihan domain real global seperti @sharklasers.com, @emalupe.com, @guerrillamail.com, @pokemail.net, @spam4.me, dan @grr.la yang langsung aktif 100% saat ini juga.',
-    },
-    {
-      q: 'Apakah bisa digunakan oleh Script / Bot / Scraper?',
-      a: 'Ya! Kilat Mail didesain ramah bot & AI browser agent dengan semantic selector (data-testid, #kilat-hub data attributes) dan REST API publik /api/otp yang dapat dipanggil langsung dari Python, cURL, Node.js, atau Playwright/Puppeteer.',
+      a: 'Bisa! Kami menyediakan pilihan domain global seperti @sharklasers.com, @emalupe.com, @guerrillamail.com, @pokemail.net, @spam4.me, dan @grr.la yang langsung aktif 100% saat ini juga.',
     },
     {
       q: 'Apakah Kilat Mail 100% gratis?',
-      a: 'Ya, Kilat Mail gratis selamanya tanpa batasan penerimaan pesan, tanpa iklan mengganggu, dan tanpa pendaftaran akun.',
+      a: 'Ya, Kilat Mail gratis selamanya tanpa batasan kuota penerimaan pesan, tanpa iklan mengganggu, dan tanpa pendaftaran akun.',
     },
   ];
 
@@ -187,6 +257,32 @@ export function App() {
     localStorage.setItem('kilat_mail_current_address', selectedAddr);
     setSelectedId(null);
     setSelectedMessage(null);
+  };
+
+  const handleAddNewMailbox = () => {
+    const fresh = generateRandomEmail(domain);
+    setActiveMailboxes((prev) => {
+      const updated = [...prev, fresh].slice(0, 4);
+      localStorage.setItem(ACTIVE_MAILBOXES_STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    setCurrentEmail(fresh);
+    localStorage.setItem('kilat_mail_current_address', fresh);
+    setSelectedId(null);
+    setSelectedMessage(null);
+  };
+
+  const handleRemoveMailbox = (boxToRemove: string) => {
+    setActiveMailboxes((prev) => {
+      const filtered = prev.filter((b) => b.toLowerCase() !== boxToRemove.toLowerCase());
+      const fallback = filtered.length > 0 ? filtered[0] : generateRandomEmail(domain);
+      const finalList = filtered.length > 0 ? filtered : [fallback];
+      localStorage.setItem(ACTIVE_MAILBOXES_STORAGE_KEY, JSON.stringify(finalList));
+      if (currentEmail.toLowerCase() === boxToRemove.toLowerCase()) {
+        handleSelectRecentEmail(fallback);
+      }
+      return finalList;
+    });
   };
 
   const handleClearRecentEmails = () => {
@@ -275,7 +371,6 @@ export function App() {
 
     const startAdaptivePolling = () => {
       if (intervalId) clearInterval(intervalId);
-      // Jika tab aktif: 3.5s; jika tab background / minimized: 10s (hemat resource & baterai)
       const pollDelay = isDocumentVisible.current ? 3500 : 10000;
       intervalId = setInterval(() => {
         loadInbox();
@@ -285,7 +380,7 @@ export function App() {
     const handleVisibilityChange = () => {
       isDocumentVisible.current = document.visibilityState === 'visible';
       if (isDocumentVisible.current) {
-        loadInbox(); // Segera refresh saat user kembali ke tab
+        loadInbox();
       }
       startAdaptivePolling();
     };
@@ -340,13 +435,19 @@ export function App() {
         className="sr-only"
         data-email={currentEmail}
         data-latest-otp={latestOtp}
+        data-latest-magic-link={latestMagicLink}
         data-inbox-count={inboxItems.length}
         data-provider={currentProvider}
         aria-hidden="true"
       />
 
       {/* Header */}
-      <Header isLive={true} />
+      <Header
+        isLive={true}
+        notificationPermission={notificationPermission}
+        onRequestNotification={handleRequestNotification}
+        onInjectTest={handleInjectTest}
+      />
 
       {/* Main Container */}
       <main className="w-full max-w-3xl px-4 py-8 sm:py-10 flex-1 flex flex-col">
@@ -356,7 +457,7 @@ export function App() {
             Email Sementara Gratis & Cepat
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto leading-relaxed">
-            Terima email aktivasi dan kode OTP instan. Ramah untuk pengguna, AI agent, scraper, dan bot.
+            Terima email aktivasi, tautan magic link, dan kode OTP secara instan. Dioptimalkan untuk manusia, AI agent, dan automation scraper.
           </p>
         </div>
 
@@ -366,22 +467,25 @@ export function App() {
           domain={domain}
           availableDomains={availableDomains}
           recentEmails={recentEmails}
+          activeMailboxes={activeMailboxes}
           isRefreshing={isRefreshing}
           onRefresh={() => loadInbox(true)}
           onRandomize={handleRandomize}
           onChangeUsername={handleChangeUsername}
           onSelectDomain={handleSelectDomain}
           onSelectRecentEmail={handleSelectRecentEmail}
+          onAddNewMailbox={handleAddNewMailbox}
+          onRemoveMailbox={handleRemoveMailbox}
           onClearRecentEmails={handleClearRecentEmails}
           onOpenQr={() => setIsQrOpen(true)}
         />
 
         {/* Helper & Shortcut Bar */}
-        <div className="flex items-center justify-between mb-4 -mt-3 text-[11px] text-zinc-500">
+        <div className="flex items-center justify-between mb-4 -mt-3 text-[11px] text-zinc-500 flex-wrap gap-2">
           <div className="hidden sm:flex items-center gap-2 font-mono">
             <span>Shortcut:</span>
             <kbd className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">C</kbd> Salin
-            <kbd className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">N</kbd> Acak Baru
+            <kbd className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">N</kbd> Acak
             <kbd className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">R</kbd> Refresh
             {latestOtp && (
               <>
@@ -395,7 +499,7 @@ export function App() {
             data-testid="mock-otp-btn"
             className="hover:text-emerald-400 flex items-center gap-1 transition-colors cursor-pointer ml-auto"
           >
-            <Sparkles className="w-3 h-3" />
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>Simulasi Kirim Email Uji Coba</span>
           </button>
         </div>
@@ -424,6 +528,11 @@ export function App() {
           )}
         </div>
 
+        {/* Bot & Agent API Snippets */}
+        <section id="api" className="mb-12">
+          <CodeSnippets email={currentEmail} />
+        </section>
+
         {/* How It Works Section */}
         <section id="cara-kerja" className="mb-12 border-t border-zinc-800/80 pt-8">
           <h2 className="text-base sm:text-lg font-bold text-zinc-100 mb-4 text-center">
@@ -435,7 +544,7 @@ export function App() {
               <div className="text-xs font-mono font-bold text-emerald-400 mb-1">LANGKAH 01</div>
               <h3 className="text-sm font-bold text-zinc-100 mb-1">Salin Alamat Email</h3>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Salin alamat email sementara yang sudah dibuat otomatis di atas.
+                Salin alamat email sementara yang sudah dibuat otomatis di atas atau buat custom username sesuka Anda.
               </p>
             </div>
 
@@ -443,7 +552,7 @@ export function App() {
               <div className="text-xs font-mono font-bold text-emerald-400 mb-1">LANGKAH 02</div>
               <h3 className="text-sm font-bold text-zinc-100 mb-1">Gunakan untuk Mendaftar</h3>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Pakai alamat email ini untuk registrasi website, aplikasi, atau download file.
+                Pakai alamat email ini untuk registrasi website, testing aplikasi, bot automation, atau download konten.
               </p>
             </div>
 
@@ -451,7 +560,7 @@ export function App() {
               <div className="text-xs font-mono font-bold text-emerald-400 mb-1">LANGKAH 03</div>
               <h3 className="text-sm font-bold text-zinc-100 mb-1">Baca Pesan & Salin OTP</h3>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Pesan akan langsung masuk di kotak masuk secara otomatis dan realtime.
+                Pesan akan langsung masuk di kotak masuk secara otomatis. Kode OTP dan Magic Link diekstrak otomatis.
               </p>
             </div>
           </div>
@@ -460,15 +569,23 @@ export function App() {
         {/* Features Section */}
         <section id="fitur" className="mb-12 border-t border-zinc-800/80 pt-8">
           <h2 className="text-base sm:text-lg font-bold text-zinc-100 mb-4 text-center">
-            Fitur Unggulan
+            Fitur Unggulan Kilat Mail
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
               <KeyRound className="w-5 h-5 text-emerald-400 mb-2" />
-              <h3 className="text-sm font-bold text-zinc-100 mb-1">Smart OTP Detection</h3>
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">Smart OTP Extractor</h3>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Mendeteksi kode OTP verifikasi secara instan dengan tombol 1-klik salin langsung.
+                Mendeteksi kode OTP verifikasi 4-8 digit secara otomatis dengan tombol 1-klik salin langsung.
+              </p>
+            </div>
+
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
+              <ExternalLink className="w-5 h-5 text-blue-400 mb-2" />
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">Magic Link Detector</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Menemukan link aktivasi akun dan URL konfirmasi pendaftaran secara instan tanpa perlu mencari di HTML.
               </p>
             </div>
 
@@ -476,44 +593,57 @@ export function App() {
               <ShieldCheck className="w-5 h-5 text-emerald-400 mb-2" />
               <h3 className="text-sm font-bold text-zinc-100 mb-1">100% Tanpa Registrasi</h3>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Langsung pakai tanpa akun, password, nomor HP, atau pelacakan cookie pribadi.
+                Langsung pakai tanpa akun, password, nomor HP, atau pelacakan cookie identitas pribadi.
               </p>
             </div>
 
             <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
-              <Zap className="w-5 h-5 text-emerald-400 mb-2" />
-              <h3 className="text-sm font-bold text-zinc-100 mb-1">Multi-Domain & Bot Native</h3>
+              <Bot className="w-5 h-5 text-purple-400 mb-2" />
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">AI Agent & Bot Ready</h3>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Didukung REST API publik dan selector data-testid ramah AI Agent & Scraper.
+                Endpoint REST API ringan (<code className="text-emerald-400 font-mono">/api/otp</code>) dan atribut DOM semantik siap pakai untuk scraper.
+              </p>
+            </div>
+
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
+              <Bell className="w-5 h-5 text-amber-400 mb-2" />
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">Desktop & Sound Alert</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Notifikasi pop-up browser dan suara chime otomatis saat email atau kode verifikasi baru tiba.
+              </p>
+            </div>
+
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
+              <MailCheck className="w-5 h-5 text-emerald-400 mb-2" />
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">Multi-Mailbox Tabs</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Buka dan kelola hingga beberapa alamat email sementara sekaligus secara simultan dalam satu jendela.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Interactive Code Snippets Explorer Section */}
-        <section id="api" className="mb-12 border-t border-zinc-800/80 pt-8">
-          <CodeSnippets email={currentEmail} />
-        </section>
-
         {/* FAQ Section */}
-        <section id="faq" className="mb-8 border-t border-zinc-800/80 pt-8">
+        <section id="faq" className="mb-12 border-t border-zinc-800/80 pt-8">
           <h2 className="text-base sm:text-lg font-bold text-zinc-100 mb-4 text-center">
-            Pertanyaan Umum (FAQ)
+            Pertanyaan yang Sering Diajukan (FAQ)
           </h2>
 
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {faqs.map((faq, index) => {
               const isOpen = openFaqIndex === index;
               return (
                 <div
                   key={index}
-                  className="bg-zinc-900/80 border border-zinc-800 rounded-xl overflow-hidden"
+                  className="bg-zinc-900/80 border border-zinc-800 rounded-2xl overflow-hidden"
                 >
                   <button
                     onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                    className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-2 text-xs sm:text-sm font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
+                    className="w-full text-left p-4.5 flex items-center justify-between gap-4 cursor-pointer hover:bg-zinc-800/40 transition-colors"
                   >
-                    <span>{faq.q}</span>
+                    <span className="text-xs sm:text-sm font-bold text-zinc-200">
+                      {faq.q}
+                    </span>
                     {isOpen ? (
                       <ChevronUp className="w-4 h-4 text-emerald-400 shrink-0" />
                     ) : (
@@ -521,7 +651,7 @@ export function App() {
                     )}
                   </button>
                   {isOpen && (
-                    <div className="px-4 pb-3.5 pt-1 text-xs text-zinc-400 leading-relaxed border-t border-zinc-800/60">
+                    <div className="px-4.5 pb-4.5 pt-1 text-xs text-zinc-400 leading-relaxed border-t border-zinc-800/40">
                       {faq.a}
                     </div>
                   )}
@@ -533,37 +663,38 @@ export function App() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-zinc-800/80 py-6 px-4 text-xs text-zinc-500 bg-zinc-950">
-        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="w-full border-t border-zinc-800/80 bg-zinc-950 py-6 text-center text-xs text-zinc-400">
+        <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-zinc-300">Kilat Mail</span>
-            <span>— The AI Agent & Developer-First Disposable Email</span>
+            <Zap className="w-4 h-4 text-emerald-400" />
+            <span className="font-semibold text-zinc-300">Kilat Mail ⚡</span>
+            <span>— Serverless Temporary Email</span>
           </div>
 
-          <div className="flex items-center gap-4 text-zinc-400">
-            <a href="#fitur" className="hover:text-zinc-200">Fitur</a>
-            <a href="#cara-kerja" className="hover:text-zinc-200">Cara Kerja</a>
-            <a href="#api" className="hover:text-zinc-200">API Bot</a>
-            <a href="#faq" className="hover:text-zinc-200">FAQ</a>
+          <div className="flex items-center gap-4 text-[11px] text-zinc-400">
             <a
               href="https://github.com/zzdree/kilat-mail"
               target="_blank"
               rel="noreferrer"
-              className="text-emerald-400 hover:underline inline-flex items-center gap-1"
+              className="hover:text-emerald-400 transition-colors flex items-center gap-1"
             >
               <span>GitHub</span>
               <ExternalLink className="w-3 h-3" />
             </a>
+            <span>•</span>
+            <span>$0 Cloudflare Stack</span>
           </div>
         </div>
       </footer>
 
-      {/* QR Modal */}
-      <QrModal
-        isOpen={isQrOpen}
-        onClose={() => setIsQrOpen(false)}
-        email={currentEmail}
-      />
+      {/* QR Code Modal */}
+      {isQrOpen && (
+        <QrModal
+          isOpen={isQrOpen}
+          email={currentEmail}
+          onClose={() => setIsQrOpen(false)}
+        />
+      )}
     </div>
   );
 }

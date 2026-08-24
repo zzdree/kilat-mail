@@ -10,6 +10,7 @@ import {
   Check,
   Download,
   FileCode,
+  ExternalLink,
 } from 'lucide-react';
 import { MessageDetail as IMessageDetail } from '../types';
 
@@ -27,6 +28,7 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
   onBack,
 }) => {
   const [copiedOtp, setCopiedOtp] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [viewMode, setViewMode] = useState<'html' | 'text'>('html');
 
   if (isLoading) {
@@ -42,7 +44,7 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
 
   const sanitizedHtml = message.body_html
     ? DOMPurify.sanitize(message.body_html, {
-        ADD_ATTR: ['target'],
+        ADD_ATTR: ['target', 'rel'],
         FORBID_TAGS: ['style', 'script', 'iframe'],
       })
     : '';
@@ -53,7 +55,13 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
     setTimeout(() => setCopiedOtp(false), 2000);
   };
 
-  // Download .EML / .TXT / .JSON file
+  const handleCopyLink = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  // Download .EML / .JSON file
   const handleDownloadEml = () => {
     const emlContent = `From: ${message.sender_name || ''} <${message.sender_address}>\nTo: ${message.recipient}\nSubject: ${message.subject || ''}\nDate: ${new Date(message.created_at).toUTCString()}\nContent-Type: text/html; charset=utf-8\n\n${message.body_html || message.body_text || ''}`;
     const blob = new Blob([emlContent], { type: 'message/rfc822' });
@@ -98,7 +106,7 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
               <button
                 onClick={() => setViewMode('html')}
                 className={`px-2.5 py-1 rounded font-medium transition-colors cursor-pointer ${
-                  viewMode === 'html' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-200'
+                  viewMode === 'html' ? 'bg-zinc-800 text-emerald-400 font-bold' : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
                 HTML
@@ -106,18 +114,17 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
               <button
                 onClick={() => setViewMode('text')}
                 className={`px-2.5 py-1 rounded font-medium transition-colors cursor-pointer ${
-                  viewMode === 'text' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-200'
+                  viewMode === 'text' ? 'bg-zinc-800 text-emerald-400 font-bold' : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                Teks
+                Teks Polos
               </button>
             </div>
           )}
 
-          {/* Export Actions */}
           <button
             onClick={handleDownloadEml}
-            className="p-2 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-emerald-400 transition-colors border border-zinc-800 cursor-pointer"
+            className="p-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
             title="Download file .EML"
           >
             <Download className="w-4 h-4" />
@@ -125,15 +132,15 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
 
           <button
             onClick={handleDownloadJson}
-            className="p-2 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-cyan-400 transition-colors border border-zinc-800 cursor-pointer"
-            title="Download payload .JSON"
+            className="p-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+            title="Download payload .JSON (Bot ready)"
           >
             <FileCode className="w-4 h-4" />
           </button>
 
           <button
             onClick={() => onDelete(message.id)}
-            className="p-2 rounded-xl bg-zinc-950 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 transition-colors border border-zinc-800 cursor-pointer"
+            className="p-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-rose-400 transition-colors cursor-pointer"
             title="Hapus pesan ini"
           >
             <Trash2 className="w-4 h-4" />
@@ -141,74 +148,107 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
         </div>
       </div>
 
-      {/* OTP Alert if detected */}
-      {message.detected_otp && (
-        <div className="mx-4 mt-4 p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <KeyRound className="w-5 h-5 text-emerald-400 shrink-0" />
+      {/* Header Info */}
+      <div className="p-4 sm:p-5 border-b border-zinc-800 bg-zinc-950/40">
+        <h3 className="text-base sm:text-lg font-bold text-zinc-100 mb-3">
+          {message.subject || '(Tanpa Subjek)'}
+        </h3>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-zinc-400">
+          <div className="flex items-center gap-2">
+            <User className="w-4 h-4 text-emerald-400 shrink-0" />
             <div>
-              <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                Kode Verifikasi Terdeteksi
-              </div>
-              <div
-                className="font-mono text-xl font-extrabold text-white tracking-widest"
-                data-testid="detected-otp-code"
-              >
-                {message.detected_otp}
-              </div>
+              <span className="font-semibold text-zinc-200">
+                {message.sender_name || message.sender_address}
+              </span>
+              {message.sender_name && (
+                <span className="text-zinc-500 font-mono ml-1.5">
+                  &lt;{message.sender_address}&gt;
+                </span>
+              )}
             </div>
           </div>
 
-          <button
-            onClick={() => handleCopyOtp(message.detected_otp!)}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors shrink-0 cursor-pointer ${
-              copiedOtp ? 'bg-emerald-500 text-zinc-950' : 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950'
-            }`}
-          >
-            {copiedOtp ? (
-              <span className="flex items-center gap-1"><Check className="w-3.5 h-3.5 stroke-[2.5]" /> Tersalin</span>
-            ) : (
-              <span className="flex items-center gap-1"><Copy className="w-3.5 h-3.5" /> Salin OTP</span>
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* Message Header Info */}
-      <div className="p-4 sm:p-5 border-b border-zinc-800">
-        <h1 className="text-base sm:text-lg font-bold text-zinc-100 mb-3 leading-snug">
-          {message.subject || '(Tanpa Subjek)'}
-        </h1>
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-zinc-400">
-          <div className="flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-zinc-400" />
-            <span className="text-zinc-500">Dari:</span>
-            <span className="text-zinc-200 font-medium truncate">
-              {message.sender_name ? `${message.sender_name} <${message.sender_address}>` : message.sender_address}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-zinc-400" />
-            <span className="text-zinc-500">Waktu:</span>
-            <span className="text-zinc-300 font-mono text-[11px]">
-              {new Date(message.created_at).toLocaleString()}
-            </span>
+          <div className="flex items-center gap-1.5 text-zinc-500 font-mono text-[11px]">
+            <Clock className="w-3.5 h-3.5" />
+            <span>{new Date(message.created_at).toLocaleString('id-ID')}</span>
           </div>
         </div>
       </div>
 
-      {/* Message Body */}
-      <div className="p-4 sm:p-6 min-h-[220px] max-h-[500px] overflow-y-auto bg-zinc-950/80">
+      {/* 🌟 SMART EXTRACTOR CARD: Highlighted OTP & Magic Link */}
+      {(message.detected_otp || message.magic_link) && (
+        <div className="mx-4 sm:mx-5 mt-4 p-4 rounded-xl bg-gradient-to-r from-emerald-950/40 via-zinc-900 to-zinc-900 border border-emerald-500/30 flex flex-col gap-3">
+          {message.detected_otp && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                  <KeyRound className="w-4 h-4" />
+                  <span>Kode OTP / 2FA Terdeteksi:</span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-mono font-black text-emerald-300 tracking-wider mt-1">
+                  {message.detected_otp}
+                </div>
+              </div>
+              <button
+                onClick={() => handleCopyOtp(message.detected_otp!)}
+                className={`flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
+                  copiedOtp
+                    ? 'bg-emerald-500 text-zinc-950'
+                    : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                }`}
+              >
+                {copiedOtp ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                <span>{copiedOtp ? 'Tersalin ke Clipboard!' : 'Salin Kode OTP'}</span>
+              </button>
+            </div>
+          )}
+
+          {message.magic_link && (
+            <div className="pt-2 border-t border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-400">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Tautan Aktivasi / Magic Link Terdeteksi:</span>
+                </div>
+                <p className="text-[11px] font-mono text-zinc-400 truncate mt-0.5 max-w-lg">
+                  {message.magic_link}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleCopyLink(message.magic_link!)}
+                  className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1"
+                  title="Salin tautan"
+                >
+                  {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedLink ? 'Tersalin' : 'Salin URL'}</span>
+                </button>
+                <a
+                  href={message.magic_link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Buka Link ↗</span>
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Body Content Reader */}
+      <div className="p-4 sm:p-6 flex-1 min-h-[250px] bg-zinc-950/20 text-zinc-300 text-sm overflow-x-auto">
         {viewMode === 'html' && message.body_html ? (
           <div
-            className="email-content-view"
+            className="prose prose-invert max-w-none prose-p:text-zinc-300 prose-headings:text-zinc-100 prose-a:text-emerald-400 prose-a:underline"
             dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
           />
         ) : (
-          <pre className="whitespace-pre-wrap font-sans text-xs sm:text-sm text-zinc-300 leading-relaxed">
-            {message.body_text || 'Pesan tidak memiliki teks isi.'}
+          <pre className="font-mono text-xs text-zinc-300 whitespace-pre-wrap leading-relaxed">
+            {message.body_text || '(Pesan tidak memiliki teks polos)'}
           </pre>
         )}
       </div>

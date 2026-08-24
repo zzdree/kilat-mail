@@ -1,5 +1,16 @@
-import React, { useState } from 'react';
-import { Mail, Trash2, KeyRound, Clock, Inbox as InboxIcon, Check, ChevronRight } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import {
+  Mail,
+  Trash2,
+  KeyRound,
+  Clock,
+  Inbox as InboxIcon,
+  Check,
+  ChevronRight,
+  ExternalLink,
+  Search,
+  Filter,
+} from 'lucide-react';
 import { InboxItem } from '../types';
 
 interface InboxListProps {
@@ -20,6 +31,8 @@ export const InboxList: React.FC<InboxListProps> = ({
   isLoading,
 }) => {
   const [copiedOtpId, setCopiedOtpId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'otp' | 'link'>('all');
 
   const formatTime = (dateStr: string) => {
     try {
@@ -38,6 +51,25 @@ export const InboxList: React.FC<InboxListProps> = ({
     setTimeout(() => setCopiedOtpId(null), 2000);
   };
 
+  // Filtered & Searched Inbox Items
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const q = searchQuery.toLowerCase();
+      const matchSearch =
+        !q ||
+        (item.subject || '').toLowerCase().includes(q) ||
+        (item.sender_name || '').toLowerCase().includes(q) ||
+        (item.sender_address || '').toLowerCase().includes(q) ||
+        (item.detected_otp || '').toLowerCase().includes(q);
+
+      if (!matchSearch) return false;
+
+      if (filterType === 'otp') return Boolean(item.detected_otp);
+      if (filterType === 'link') return Boolean(item.magic_link);
+      return true;
+    });
+  }, [items, searchQuery, filterType]);
+
   return (
     <div
       className="w-full bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden shadow-sm flex flex-col"
@@ -45,7 +77,7 @@ export const InboxList: React.FC<InboxListProps> = ({
       data-inbox-count={items.length}
     >
       {/* Header bar */}
-      <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 bg-zinc-900 border-b border-zinc-800">
+      <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 bg-zinc-900 border-b border-zinc-800 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Mail className="w-4 h-4 text-emerald-400" />
           <h2 className="text-sm font-bold text-zinc-100">Kotak Masuk</h2>
@@ -66,6 +98,57 @@ export const InboxList: React.FC<InboxListProps> = ({
         )}
       </div>
 
+      {/* Search & Filter Bar (jika ada pesan) */}
+      {items.length > 1 && (
+        <div className="px-4 py-2.5 bg-zinc-950/60 border-b border-zinc-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Cari pengirim, subjek, atau OTP..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/50"
+            />
+          </div>
+
+          <div className="flex items-center gap-1 text-[11px]">
+            <button
+              onClick={() => setFilterType('all')}
+              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                filterType === 'all'
+                  ? 'bg-zinc-800 text-emerald-400 font-bold border border-zinc-700'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              Semua
+            </button>
+            <button
+              onClick={() => setFilterType('otp')}
+              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                filterType === 'otp'
+                  ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <KeyRound className="w-3 h-3 text-emerald-400" />
+              <span>OTP</span>
+            </button>
+            <button
+              onClick={() => setFilterType('link')}
+              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                filterType === 'link'
+                  ? 'bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <ExternalLink className="w-3 h-3 text-blue-400" />
+              <span>Link</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Message List */}
       <div className="divide-y divide-zinc-800/80">
         {items.length === 0 ? (
@@ -77,7 +160,7 @@ export const InboxList: React.FC<InboxListProps> = ({
               Kotak masuk masih kosong
             </h3>
             <p className="text-xs text-zinc-400 max-w-sm leading-relaxed mb-3">
-              Gunakan alamat email di atas. Pesan atau kode verifikasi yang masuk akan otomatis tampil di sini.
+              Gunakan alamat email di atas. Pesan, kode OTP, atau tautan verifikasi yang masuk akan otomatis tampil di sini.
             </p>
             {isLoading && (
               <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium">
@@ -86,8 +169,12 @@ export const InboxList: React.FC<InboxListProps> = ({
               </div>
             )}
           </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="py-10 px-4 text-center text-zinc-400 text-xs">
+            Tidak ada pesan yang cocok dengan filter pencarian "{searchQuery}".
+          </div>
         ) : (
-          items.map((item) => {
+          filteredItems.map((item) => {
             const isSelected = selectedId === item.id;
             const isUnread = item.is_read === 0;
 
@@ -98,76 +185,94 @@ export const InboxList: React.FC<InboxListProps> = ({
                 data-message-id={item.id}
                 data-unread={isUnread}
                 data-otp={item.detected_otp || ''}
-                className={`p-4 cursor-pointer transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                data-magic-link={item.magic_link || ''}
+                className={`p-4 sm:px-5 flex items-start justify-between gap-3 cursor-pointer transition-colors group ${
                   isSelected
                     ? 'bg-zinc-800/90'
                     : isUnread
-                    ? 'bg-zinc-900/90 hover:bg-zinc-800/50'
-                    : 'bg-zinc-950/40 hover:bg-zinc-850/40 text-zinc-400'
+                    ? 'bg-zinc-900/90 hover:bg-zinc-800/60'
+                    : 'bg-zinc-950/40 hover:bg-zinc-900/60'
                 }`}
               >
-                {/* Left: Sender & Subject */}
-                <div className="flex items-start gap-3 min-w-0 flex-1">
-                  <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${isUnread ? 'bg-emerald-400' : 'bg-transparent'}`} />
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className={`text-xs sm:text-sm truncate ${isUnread ? 'font-bold text-zinc-100' : 'font-medium text-zinc-300'}`}>
+                <div className="flex-1 min-w-0">
+                  {/* Sender & Time row */}
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isUnread && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                      )}
+                      <span
+                        className={`text-xs font-semibold truncate ${
+                          isUnread ? 'text-zinc-100' : 'text-zinc-300'
+                        }`}
+                      >
                         {item.sender_name || item.sender_address}
                       </span>
-                      <span className="text-[11px] text-zinc-500 font-mono hidden sm:inline">
-                        • {formatTime(item.created_at)}
-                      </span>
                     </div>
 
-                    <div className="text-xs text-zinc-300 truncate">
-                      {item.subject || '(Tanpa Subjek)'}
+                    <div className="flex items-center gap-1 text-[11px] text-zinc-500 shrink-0">
+                      <Clock className="w-3 h-3" />
+                      <span>{formatTime(item.created_at)}</span>
                     </div>
+                  </div>
+
+                  {/* Subject */}
+                  <h4
+                    className={`text-xs mb-2 truncate ${
+                      isUnread ? 'font-bold text-zinc-200' : 'text-zinc-400'
+                    }`}
+                  >
+                    {item.subject || '(Tanpa Subjek)'}
+                  </h4>
+
+                  {/* Badges: Smart OTP Quick Copy & Magic Link */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {item.detected_otp && (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold">
+                        <KeyRound className="w-3.5 h-3.5" />
+                        <span>OTP: {item.detected_otp}</span>
+                        <button
+                          onClick={(e) => handleCopyOtp(item.detected_otp!, item.id, e)}
+                          className="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-[10px] uppercase transition-colors cursor-pointer"
+                          title="Salin kode OTP ini"
+                        >
+                          {copiedOtpId === item.id ? (
+                            <span className="flex items-center gap-0.5 text-zinc-100 font-bold">
+                              <Check className="w-3 h-3" /> Disalin
+                            </span>
+                          ) : (
+                            'Salin'
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {item.magic_link && (
+                      <a
+                        href={item.magic_link}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 text-xs font-semibold transition-colors"
+                        title="Buka tautan verifikasi di tab baru"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Buka Link Aktivasi ↗</span>
+                      </a>
+                    )}
                   </div>
                 </div>
 
-                {/* Right: OTP Quick Copy & Action */}
-                <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-2 sm:pt-0">
-                  <span className="text-[11px] text-zinc-500 font-mono sm:hidden flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    <span>{formatTime(item.created_at)}</span>
-                  </span>
-
-                  {item.detected_otp && (
-                    <button
-                      onClick={(e) => handleCopyOtp(item.detected_otp!, item.id, e)}
-                      data-testid={`otp-btn-${item.id}`}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors ${
-                        copiedOtpId === item.id
-                          ? 'bg-emerald-500 text-zinc-950'
-                          : 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 border border-emerald-500/30'
-                      }`}
-                      title="Salin kode OTP ini"
-                    >
-                      {copiedOtpId === item.id ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                          <span>Tersalin!</span>
-                        </>
-                      ) : (
-                        <>
-                          <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>OTP: {item.detected_otp}</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => onDeleteItem(item.id, e)}
-                      className="p-1.5 text-zinc-400 hover:text-rose-400 rounded-lg hover:bg-zinc-800 transition-colors"
-                      title="Hapus email"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                    <ChevronRight className="w-4 h-4 text-zinc-500" />
-                  </div>
+                {/* Right chevron & delete action */}
+                <div className="flex items-center gap-1 shrink-0 pt-1">
+                  <button
+                    onClick={(e) => onDeleteItem(item.id, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 transition-all cursor-pointer"
+                    title="Hapus pesan ini"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
                 </div>
               </div>
             );

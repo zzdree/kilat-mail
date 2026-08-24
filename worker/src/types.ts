@@ -13,6 +13,7 @@ export interface EmailMessageRecord {
   body_text: string | null;
   body_html: string | null;
   detected_otp: string | null;
+  magic_link: string | null;
   raw_size: number;
   is_read: number;
   created_at: string;
