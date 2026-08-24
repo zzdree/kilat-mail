@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kilat-mail-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-02-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kilat_mail_db",
+      "database_id": "YOUR_D1_DATABASE_ID_HERE"
+    }
+  ],
+  "vars": {
+    "ALLOWED_ORIGIN": "*",
+    "EMAIL_EXPIRY_HOURS": "48"
+  },
+  "triggers": {
+    "crons": ["0 */6 * * *"]
+  }
+}

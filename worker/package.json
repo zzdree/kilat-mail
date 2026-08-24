@@ -1,0 +1,20 @@
+{
+  "name": "kilat-mail-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker for Kilat Mail temporary email receiver & API",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init:local": "wrangler d1 execute kilat_mail_db --local --file=./src/schema.sql",
+    "db:init:remote": "wrangler d1 execute kilat_mail_db --remote --file=./src/schema.sql"
+  },
+  "dependencies": {
+    "postal-mime": "^2.2.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250224.0",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.109.2"
+  }
+}
