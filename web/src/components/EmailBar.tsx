@@ -8,17 +8,22 @@ import {
   QrCode,
   Globe,
   ChevronDown,
+  History,
+  Trash2,
 } from 'lucide-react';
 
 interface EmailBarProps {
   email: string;
   domain: string;
   availableDomains: string[];
+  recentEmails: string[];
   isRefreshing: boolean;
   onRefresh: () => void;
   onRandomize: () => void;
   onChangeUsername: (newUsername: string) => void;
   onSelectDomain: (newDomain: string) => void;
+  onSelectRecentEmail: (selectedEmail: string) => void;
+  onClearRecentEmails: () => void;
   onOpenQr: () => void;
 }
 
@@ -26,23 +31,32 @@ export const EmailBar: React.FC<EmailBarProps> = ({
   email,
   domain,
   availableDomains,
+  recentEmails,
   isRefreshing,
   onRefresh,
   onRandomize,
   onChangeUsername,
   onSelectDomain,
+  onSelectRecentEmail,
+  onClearRecentEmails,
   onOpenQr,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [customInput, setCustomInput] = useState('');
   const [isDomainMenuOpen, setIsDomainMenuOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
   const domainRef = useRef<HTMLDivElement>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (domainRef.current && !domainRef.current.contains(e.target as Node)) {
         setIsDomainMenuOpen(false);
+      }
+      if (historyRef.current && !historyRef.current.contains(e.target as Node)) {
+        setIsHistoryOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -69,46 +83,91 @@ export const EmailBar: React.FC<EmailBarProps> = ({
       className="w-full bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-sm mb-6"
       data-testid="email-bar"
     >
-      {/* Top info label & Quick Domain Switcher */}
-      <div className="flex items-center justify-between gap-2 mb-2.5">
+      {/* Top info label & Actions */}
+      <div className="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
         <label htmlFor="temp-email-input" className="text-xs font-semibold text-zinc-400">
           Alamat Email Sementara:
         </label>
 
-        {/* Domain Switcher Pill */}
-        <div className="relative" ref={domainRef}>
-          <button
-            onClick={() => setIsDomainMenuOpen(!isDomainMenuOpen)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white font-mono text-[11px] transition-colors cursor-pointer"
-            title="Ganti Domain Email"
-          >
-            <Globe className="w-3 h-3 text-emerald-400" />
-            <span>@{domain}</span>
-            <ChevronDown className="w-3 h-3 text-zinc-500" />
-          </button>
+        <div className="flex items-center gap-2">
+          {/* Recent Mailboxes History Dropdown */}
+          {recentEmails.length > 1 && (
+            <div className="relative" ref={historyRef}>
+              <button
+                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-zinc-200 font-sans text-[11px] transition-colors cursor-pointer"
+                title="Riwayat Alamat Email Sebelumnya"
+              >
+                <History className="w-3 h-3 text-cyan-400" />
+                <span>Riwayat ({recentEmails.length})</span>
+              </button>
 
-          {isDomainMenuOpen && (
-            <div className="absolute right-0 mt-1.5 w-44 bg-zinc-900 border border-zinc-700/80 rounded-xl shadow-xl py-1 z-30 font-mono text-xs animate-fade-in">
-              <div className="px-3 py-1 text-[10px] text-zinc-500 font-sans uppercase font-bold tracking-wider border-b border-zinc-800">
-                Pilih Domain
-              </div>
-              {availableDomains.map((d) => (
-                <button
-                  key={d}
-                  onClick={() => {
-                    onSelectDomain(d);
-                    setIsDomainMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 hover:bg-zinc-800 transition-colors flex items-center justify-between cursor-pointer ${
-                    domain === d ? 'text-emerald-400 font-bold bg-emerald-500/10' : 'text-zinc-300'
-                  }`}
-                >
-                  <span>@{d}</span>
-                  {domain === d && <Check className="w-3.5 h-3.5 text-emerald-400" />}
-                </button>
-              ))}
+              {isHistoryOpen && (
+                <div className="absolute right-0 mt-1.5 w-64 bg-zinc-900 border border-zinc-700/80 rounded-xl shadow-2xl py-1.5 z-30 font-mono text-xs animate-fade-in">
+                  <div className="px-3 py-1 text-[10px] text-zinc-500 font-sans uppercase font-bold tracking-wider border-b border-zinc-800 flex items-center justify-between">
+                    <span>Email Sebelumnya</span>
+                    <button
+                      onClick={onClearRecentEmails}
+                      className="text-zinc-500 hover:text-rose-400 text-[10px] font-normal cursor-pointer"
+                    >
+                      Bersihkan
+                    </button>
+                  </div>
+                  {recentEmails.map((item) => (
+                    <button
+                      key={item}
+                      onClick={() => {
+                        onSelectRecentEmail(item);
+                        setIsHistoryOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 hover:bg-zinc-800 transition-colors flex items-center justify-between cursor-pointer truncate ${
+                        email === item ? 'text-emerald-400 font-bold bg-emerald-500/10' : 'text-zinc-300'
+                      }`}
+                    >
+                      <span className="truncate">{item}</span>
+                      {email === item && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-1.5" />}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
+
+          {/* Domain Switcher Pill */}
+          <div className="relative" ref={domainRef}>
+            <button
+              onClick={() => setIsDomainMenuOpen(!isDomainMenuOpen)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white font-mono text-[11px] transition-colors cursor-pointer"
+              title="Ganti Domain Email"
+            >
+              <Globe className="w-3 h-3 text-emerald-400" />
+              <span>@{domain}</span>
+              <ChevronDown className="w-3 h-3 text-zinc-500" />
+            </button>
+
+            {isDomainMenuOpen && (
+              <div className="absolute right-0 mt-1.5 w-44 bg-zinc-900 border border-zinc-700/80 rounded-xl shadow-2xl py-1 z-30 font-mono text-xs animate-fade-in">
+                <div className="px-3 py-1 text-[10px] text-zinc-500 font-sans uppercase font-bold tracking-wider border-b border-zinc-800">
+                  Pilih Domain
+                </div>
+                {availableDomains.map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => {
+                      onSelectDomain(d);
+                      setIsDomainMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 hover:bg-zinc-800 transition-colors flex items-center justify-between cursor-pointer ${
+                      domain === d ? 'text-emerald-400 font-bold bg-emerald-500/10' : 'text-zinc-300'
+                    }`}
+                  >
+                    <span>@{d}</span>
+                    {domain === d && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

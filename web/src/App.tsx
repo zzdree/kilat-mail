@@ -29,6 +29,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 
+const RECENT_EMAILS_STORAGE_KEY = 'kilat_mail_recent_addresses';
+
 function generateRandomEmail(domain: string): string {
   const randomChars = Math.random().toString(36).substring(2, 8);
   return `kilat.${randomChars}@${domain}`;
@@ -68,6 +70,17 @@ export function App() {
     return initial;
   });
 
+  // Riwayat 5 alamat email terakhir
+  const [recentEmails, setRecentEmails] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_EMAILS_STORAGE_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<IMessageDetail | null>(null);
@@ -79,10 +92,22 @@ export function App() {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
   const prevInboxLength = useRef<number>(0);
+  const isDocumentVisible = useRef<boolean>(true);
   const currentProvider = getProviderForDomain(domain);
 
   // Ambil latest OTP dari pesan masuk
   const latestOtp = inboxItems.find((i) => Boolean(i.detected_otp))?.detected_otp || '';
+
+  // Simpan ke Recent Mailboxes History setiap kali email berganti
+  useEffect(() => {
+    if (!currentEmail) return;
+    setRecentEmails((prev) => {
+      const filtered = prev.filter((e) => e.toLowerCase() !== currentEmail.toLowerCase());
+      const updated = [currentEmail, ...filtered].slice(0, 5);
+      localStorage.setItem(RECENT_EMAILS_STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, [currentEmail]);
 
   // Tab Title Flashing saat ada pesan baru
   useEffect(() => {
@@ -152,6 +177,21 @@ export function App() {
     localStorage.setItem('kilat_mail_current_address', updated);
     setSelectedId(null);
     setSelectedMessage(null);
+  };
+
+  const handleSelectRecentEmail = (selectedAddr: string) => {
+    const newDomain = selectedAddr.split('@')[1] || domain;
+    setDomain(newDomain);
+    localStorage.setItem('kilat_mail_domain', newDomain);
+    setCurrentEmail(selectedAddr);
+    localStorage.setItem('kilat_mail_current_address', selectedAddr);
+    setSelectedId(null);
+    setSelectedMessage(null);
+  };
+
+  const handleClearRecentEmails = () => {
+    setRecentEmails([currentEmail]);
+    localStorage.setItem(RECENT_EMAILS_STORAGE_KEY, JSON.stringify([currentEmail]));
   };
 
   const loadInbox = useCallback(
@@ -227,13 +267,36 @@ export function App() {
     };
   }, [selectedId]);
 
+  // Adaptive Smart Polling (Page Visibility API)
   useEffect(() => {
     loadInbox();
-    const interval = setInterval(() => {
-      loadInbox();
-    }, 3500);
 
-    return () => clearInterval(interval);
+    let intervalId: any;
+
+    const startAdaptivePolling = () => {
+      if (intervalId) clearInterval(intervalId);
+      // Jika tab aktif: 3.5s; jika tab background / minimized: 10s (hemat resource & baterai)
+      const pollDelay = isDocumentVisible.current ? 3500 : 10000;
+      intervalId = setInterval(() => {
+        loadInbox();
+      }, pollDelay);
+    };
+
+    const handleVisibilityChange = () => {
+      isDocumentVisible.current = document.visibilityState === 'visible';
+      if (isDocumentVisible.current) {
+        loadInbox(); // Segera refresh saat user kembali ke tab
+      }
+      startAdaptivePolling();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    startAdaptivePolling();
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [loadInbox]);
 
   const handleDeleteItem = async (id: string, e?: React.MouseEvent) => {
@@ -297,16 +360,19 @@ export function App() {
           </p>
         </div>
 
-        {/* Email Bar Component */}
+        {/* Email Bar Component with Multi-Mailbox Switcher */}
         <EmailBar
           email={currentEmail}
           domain={domain}
           availableDomains={availableDomains}
+          recentEmails={recentEmails}
           isRefreshing={isRefreshing}
           onRefresh={() => loadInbox(true)}
           onRandomize={handleRandomize}
           onChangeUsername={handleChangeUsername}
           onSelectDomain={handleSelectDomain}
+          onSelectRecentEmail={handleSelectRecentEmail}
+          onClearRecentEmails={handleClearRecentEmails}
           onOpenQr={() => setIsQrOpen(true)}
         />
 

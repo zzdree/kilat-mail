@@ -2,16 +2,25 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23F59E0B'><path d='M13 2L3 14h9l-1 8 10-12h-9l1-8z'/></svg>" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2334D399'><path d='M13 2L3 14h9l-1 8 10-12h-9l1-8z'/></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kilat Mail ⚡ — Instant & Serverless Temporary Email</title>
-    <meta name="description" content="Layanan email sekali pakai secepat kilat untuk menerima OTP dan verifikasi akun tanpa spam." />
+    <meta name="description" content="Layanan email sekali pakai secepat kilat untuk menerima kode verifikasi OTP dan melindungi privasi tanpa spam." />
+
+    <!-- PWA & Mobile Web App Meta -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#09090b" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Kilat Mail" />
+    <link rel="apple-touch-icon" href="/icon-192.svg" />
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-dark text-primary antialiased">
+  <body class="bg-[#09090b] text-zinc-100 antialiased selection:bg-emerald-500 selection:text-zinc-950">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

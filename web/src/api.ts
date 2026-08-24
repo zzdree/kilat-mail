@@ -113,12 +113,22 @@ async function ensureMailTmAccount(email: string): Promise<string | null> {
 }
 
 async function fetchMailTmInbox(email: string): Promise<InboxItem[]> {
-  const token = await ensureMailTmAccount(email);
+  let token = await ensureMailTmAccount(email);
   if (!token) return [];
 
-  const res = await fetch(`${MAIL_TM_API}/messages`, {
+  let res = await fetch(`${MAIL_TM_API}/messages`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+
+  // Auto-recovery jika token expired (401/403)
+  if (res.status === 401 || res.status === 403) {
+    localStorage.removeItem(STORAGE_TOKEN_KEY);
+    token = await ensureMailTmAccount(email);
+    if (!token) return [];
+    res = await fetch(`${MAIL_TM_API}/messages`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
 
   if (!res.ok) return [];
   const json = await res.json();
@@ -138,12 +148,22 @@ async function fetchMailTmInbox(email: string): Promise<InboxItem[]> {
 }
 
 async function fetchMailTmDetail(rawId: string): Promise<MessageDetail> {
-  const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+  let token = localStorage.getItem(STORAGE_TOKEN_KEY);
   if (!token) throw new Error('Token sesi tidak ditemukan');
 
-  const res = await fetch(`${MAIL_TM_API}/messages/${rawId}`, {
+  let res = await fetch(`${MAIL_TM_API}/messages/${rawId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+
+  if (res.status === 401 || res.status === 403) {
+    localStorage.removeItem(STORAGE_TOKEN_KEY);
+    const email = localStorage.getItem(STORAGE_EMAIL_KEY) || '';
+    token = await ensureMailTmAccount(email);
+    if (!token) throw new Error('Gagal memperbarui sesi token Mail.tm');
+    res = await fetch(`${MAIL_TM_API}/messages/${rawId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
 
   if (!res.ok) throw new Error('Gagal mengambil pesan');
   const m = await res.json();

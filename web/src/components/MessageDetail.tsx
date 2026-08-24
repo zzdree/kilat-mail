@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import DOMPurify from 'dompurify';
-import { ArrowLeft, Trash2, User, Clock, KeyRound, Copy, Check } from 'lucide-react';
+import {
+  ArrowLeft,
+  Trash2,
+  User,
+  Clock,
+  KeyRound,
+  Copy,
+  Check,
+  Download,
+  FileCode,
+} from 'lucide-react';
 import { MessageDetail as IMessageDetail } from '../types';
 
 interface MessageDetailProps {
@@ -43,6 +53,29 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
     setTimeout(() => setCopiedOtp(false), 2000);
   };
 
+  // Download .EML / .TXT / .JSON file
+  const handleDownloadEml = () => {
+    const emlContent = `From: ${message.sender_name || ''} <${message.sender_address}>\nTo: ${message.recipient}\nSubject: ${message.subject || ''}\nDate: ${new Date(message.created_at).toUTCString()}\nContent-Type: text/html; charset=utf-8\n\n${message.body_html || message.body_text || ''}`;
+    const blob = new Blob([emlContent], { type: 'message/rfc822' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `email-${message.id.substring(0, 8)}.eml`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadJson = () => {
+    const jsonContent = JSON.stringify(message, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `email-${message.id.substring(0, 8)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div
       className="w-full bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden shadow-sm flex flex-col"
@@ -50,7 +83,7 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
       data-detail-id={message.id}
     >
       {/* Top action bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-zinc-900 border-b border-zinc-800">
+      <div className="flex items-center justify-between px-4 py-3 bg-zinc-900 border-b border-zinc-800 flex-wrap gap-2">
         <button
           onClick={onBack}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-zinc-200 text-xs font-semibold transition-colors cursor-pointer border border-zinc-800"
@@ -80,6 +113,23 @@ export const MessageDetail: React.FC<MessageDetailProps> = ({
               </button>
             </div>
           )}
+
+          {/* Export Actions */}
+          <button
+            onClick={handleDownloadEml}
+            className="p-2 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-emerald-400 transition-colors border border-zinc-800 cursor-pointer"
+            title="Download file .EML"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={handleDownloadJson}
+            className="p-2 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-zinc-400 hover:text-cyan-400 transition-colors border border-zinc-800 cursor-pointer"
+            title="Download payload .JSON"
+          >
+            <FileCode className="w-4 h-4" />
+          </button>
 
           <button
             onClick={() => onDelete(message.id)}
