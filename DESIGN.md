@@ -1,16 +1,22 @@
 # Design System: Kilat Mail (⚡)
+
 **Project:** Kilat Mail  
 **Repository:** [zzdree/kilat-mail](https://github.com/zzdree/kilat-mail)  
+**Live URL:** [https://kilat-mail.pages.dev](https://kilat-mail.pages.dev)  
 
 ---
 
-## 1. Visual Theme & Atmosphere
+## 1. Visual Theme & Philosophy
 **Kilat Mail** mengusung filosofi desain *"Electric Precision Minimalist"*. 
-Antarmuka dirancang untuk memancarkan kesan kecepatan super tinggi (*lightning fast*), kebersihan ekstrem tanpa gangguan visual atau banner iklan, serta kejelasan informasi instan.
+Antarmuka dirancang untuk memberikan sudut pandang (POV) pengunjung yang **simpel, frictionless, dan cepat**:
+1. Pengunjung datang langsung melihat alamat email siap pakai.
+2. Tombol salin email berukuran besar dengan feedback visual *"Tersalin!"*.
+3. Feed kotak masuk responsif dengan indikator realtime dan deteksi otomatis kode OTP.
+4. Nilai manfaat (value propositions) yang jelas dan menenangkan bagi pengguna privasi.
 
 * **Mood:** Snappy, Modern, High-Tech, Crisp, Trusted.
-* **Density:** Balanced & Focused. Area kerja utama langsung menampilkan alamat email aktif dan feed inbox tanpa scrolling berlebih.
-* **Depth & Elevation:** Menggunakan *subtle glass-morphism*, layer *whisper-soft borders*, dan elevasi bayangan halus (*whisper diffused shadows*) yang memberikan kesan taktil tanpa terasa berat.
+* **Density:** Balanced & Focused (`max-w-5xl` centered container).
+* **Depth & Elevation:** Menggunakan *subtle glass-morphism*, layer *whisper-soft borders* (`border-gray-800`), dan aksen pendaran amber (`glow-amber-subtle`).
 
 ---
 
@@ -18,60 +24,53 @@ Antarmuka dirancang untuk memancarkan kesan kecepatan super tinggi (*lightning f
 
 | Token Name | Hex Code | Descriptive Name | Functional Role |
 | :--- | :--- | :--- | :--- |
-| `--color-primary-brand` | `#F59E0B` | Electric Amber Lightning | Aksen utama logo, status kilat, dan elemen high-priority |
+| `--color-primary-brand` | `#F59E0B` | Electric Amber Lightning | Aksen utama logo, tombol utama, dan sorotan OTP |
 | `--color-primary-brand-hover` | `#D97706` | Deep Golden Surge | Hover state tombol aksi utama & badge aktif |
-| `--color-accent-cyan` | `#06B6D4` | Kinetic Neon Cyan | Indikator live status, streaming indicator, dan highlight OTP |
-| `--color-bg-dark` | `#0B0F19` | Deep Obsidian Void | Background utama tema gelap (Dark mode default) |
+| `--color-accent-cyan` | `#06B6D4` | Kinetic Neon Cyan | Indikator live status, streaming indicator, dan border unread |
+| `--color-bg-dark` | `#0B0F19` | Deep Obsidian Void | Background utama aplikasi (Dark mode default) |
 | `--color-surface-dark` | `#111827` | Midnight Slate | Container card, inbox list item, modal surface |
 | `--color-surface-dark-elevated`| `#1F2937` | Elevated Charcoal | Card hover state, input fields, header bar |
 | `--color-border-dark` | `#374151` | Subtle Steel Wire | Border pembatas tipis berpresisi tinggi |
-| `--color-text-primary` | `#F9FAFB` | Pure Starlight White | Teks judul utama, isi email, dan angka OTP |
+| `--color-text-primary` | `#F9FAFB` | Pure Starlight White | Judul utama, isi email, dan angka OTP |
 | `--color-text-secondary`| `#9CA3AF` | Neutral Cool Slate | Subtitle, metadata pengirim, tanggal, dan placeholder |
 | `--color-text-muted` | `#6B7280` | Muted Gunmetal | Label kecil, timestamp sekunder, footer notes |
-| `--color-success` | `#10B981` | Emerald Surge | Notifikasi berhasil disalin (*Copied!*), status email terhubung |
-| `--color-danger` | `#EF4444` | Crimson Flame | Tombol hapus inbox, reset alamat email, error state |
+| `--color-success` | `#10B981` | Emerald Surge | Notifikasi berhasil disalin (*Copied!*), status live |
+| `--color-danger` | `#EF4444` | Crimson Flame | Tombol hapus inbox, reset alamat email |
 
 ---
 
-## 3. Typography Rules
-* **Display & Body Font:** `Inter`, `Plus Jakarta Sans`, atau system fallback modern (`system-ui, -apple-system, sans-serif`).
-* **Monospace Token Font:** `JetBrains Mono`, `Fira Code`, atau `ui-monospace` untuk alamat email, kode OTP, header MIME, dan payload data.
-* **Typographic Hierarchy:**
-  * **Hero / Title:** `text-2xl` sampai `text-3xl`, Font Weight `700 (Bold)`, tight letter-spacing (`-0.02em`).
-  * **Email Bar Address:** `text-lg` sampai `text-xl`, Font Weight `600 (Semibold)`, Monospace.
+## 3. Typography & Spacing
+* **Display & Body Font:** `Inter`, `system-ui, -apple-system, sans-serif`.
+* **Monospace Token Font:** `JetBrains Mono`, `ui-monospace, Consolas` untuk alamat email, kode OTP, dan raw headers.
+* **Typographic Scale:**
+  * **Hero Headline:** `text-2xl` sampai `text-4xl`, Font Weight `800 (Extra Bold)`.
+  * **Email Address Box:** `text-base` sampai `text-xl`, Font Weight `700 (Bold)`, Monospace.
   * **OTP Highlight Code:** `text-3xl` sampai `text-4xl`, Font Weight `800 (Extra Bold)`, Monospace, tracked out (`0.15em`).
-  * **Body & Email Content:** `text-sm` sampai `text-base`, Line Height `1.6`, Font Weight `400 (Regular)`.
+  * **Body & Email Content:** `text-xs` sampai `text-sm`, Line Height `1.6`.
 
 ---
 
-## 4. Component Stylings
+## 4. Visitor-First Component Layout
 
-### 🔘 1. Email Action Bar (The Hero Widget)
-* **Container:** Subtly rounded pill-shaped box (`rounded-xl`), background `surface-dark-elevated` dengan aksen border tipis emas/amber.
-* **Email Display:** Terlihat jelas di tengah dengan indikator titik hijau berkedip (*pulsing live indicator*) yang menandakan email aktif & siap menerima pesan.
+### 🔘 1. Hero Email Bar Widget
+* **Container:** Card `bg-[#111827]` dengan border `border-gray-800/90` dan pendaran gradasi amber tipis di garis atas.
+* **Email Address Input:** Background `#0B0F19` berbayang ke dalam (*shadow-inner*) dengan font amber tebal yang dapat disalin satu klik.
 * **Action Buttons:**
-  * **Copy Button:** Tombol aksen amber dengan ikon kilat/salin. Menghasilkan animasi feedback *"Tersalin!"* saat diklik.
-  * **Refresh Button:** Ikon putar halus yang berputar saat fetching realtime.
-  * **Change / Randomize:** Tombol minimalis untuk mengganti username.
+  * **"Salin Email" Button:** Aksen amber cerah yang bertransformasi menjadi hijau zamrud (`#10B981`) saat disalin.
+  * **"Acak" & "Kustom" Buttons:** Tombol sekunder dengan ikon intuitif.
+  * **"Kirim Mock OTP" Button:** Tombol uji coba instan dengan aksen pendaran lembut.
 
-### 📬 2. Live Inbox List & Item Cards
-* **Cards:** Rectangular cards dengan sudut melengkung halus (`rounded-lg`), transisi hover lembut dengan border glow warna aksen.
-* **Unread State:** Ditandai dengan aksen garis vertikal di sebelah kiri berwarna `#06B6D4` (Neon Cyan) dan font pengirim tebal.
-* **Item Metadata:** Menampilkan avatar monogram pengirim, nama pengirim, subjek yang terpotong rapi (*single line truncation*), dan relative time (misal: "2 detik lalu", "5 menit lalu").
+### 📬 2. Kotak Masuk (Feed & Empty State)
+* **Unread Indicator:** Aksen garis vertikal kiri cyan `#06B6D4` dan avatar monogram pengirim.
+* **OTP Tag Chip:** Tag badge di dalam baris email `KeyRound + OTP: XXXXXX` sehingga pengunjung tidak perlu membuka email jika hanya butuh kodenya.
+* **Empty State:** Ikon kotak masuk berongga dengan teks penjelasan yang ramah dan status live checking berdenyut.
 
-### 🔑 3. Smart OTP Highlight Card (Special Component)
-* **Card Design:** Ditempatkan di bagian atas saat detail email dibuka jika sistem mendeteksi kode OTP.
-* **Atmosphere:** Aksen latar belakang transparan berpendar gradasi cyan ke amber (`bg-gradient-to-r`).
-* **Content:** Label *"KODE VERIFIKASI TERDETEKSI"*, angka OTP berukuran besar di tengah, dan tombol instan *"Salin OTP"*.
+### 🔑 3. Smart OTP Highlight Card
+* Muncul di bagian teratas panel pembaca email jika terdeteksi kode verifikasi.
+* Menyajikan kode dalam font monospaced besar dengan tombol salin instan.
 
-### 📖 4. Sanitized Email Viewer
-* **Header Detail:** Subjek besar, pengirim lengkap (name & address), tanggal/jam lengkap.
-* **View Switcher:** Segmented control mini untuk beralih antara tampilan **Preview (HTML)** dan **Teks Polos (Plain Text)**.
-* **Content Container:** Background kontras yang ramah mata dengan styling responsif untuk newsletter maupun plain text receipt.
-
----
-
-## 5. Layout Principles
-* **Max Width Container:** `max-w-4xl` (sekitar 896px) di tengah layar (*centered layout*) untuk memastikan fokus pengguna tetap pada email bar & inbox list.
-* **Fluid Responsiveness:** Pada layar mobile (< 640px), layout bertransformasi menjadi *full width* dengan padding horizontal `16px`. Detail pesan membuka drawer/view penuh yang mulus.
-* **Whitespace Strategy:** Spasi vertikal yang lega antar-section (`gap-6` / `gap-8`) untuk memastikan tidak terasa sempit atau membingungkan.
+### 🛡️ 4. Feature Highlights & Value Props
+* 3 kartu benefit di bagian bawah:
+  1. **Smart OTP Extractor** (Ikon Kunci Amber)
+  2. **100% Privasi & Tanpa Login** (Ikon Perisai Cyan)
+  3. **Serverless Edge Cloudflare** (Ikon Kilat Zamrud)

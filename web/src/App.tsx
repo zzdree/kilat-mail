@@ -7,6 +7,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { SetupGuideModal } from './components/SetupGuideModal';
 import { InboxItem, MessageDetail as IMessageDetail } from './types';
 import { fetchInbox, fetchMessage, deleteMessage, clearInbox, injectTestEmail } from './api';
+import { ShieldCheck, Zap, KeyRound, Clock, CheckCircle2, ChevronDown } from 'lucide-react';
 
 const DEFAULT_DOMAIN = 'kilat.eu.org';
 
@@ -184,7 +185,21 @@ export function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 sm:py-8 flex flex-col">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 sm:py-10 flex flex-col">
+        {/* Hero Tagline for Visitors */}
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-3">
+            <Zap className="w-3.5 h-3.5 fill-amber-400" />
+            <span>Gratis • Tanpa Registrasi • Auto-Detect OTP</span>
+          </div>
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mb-2">
+            Email Sementara <span className="text-amber-400">Super Cepat</span> & Otomatis
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-400 max-w-xl mx-auto leading-relaxed">
+            Gunakan alamat email ini untuk verifikasi akun, terima kode OTP instan, dan jaga privasi inbox utama kamu dari spam.
+          </p>
+        </div>
+
         {/* Email Bar Widget Hero */}
         <EmailBar
           email={currentEmail}
@@ -196,7 +211,7 @@ export function App() {
         />
 
         {/* Master-Detail Split Content */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 flex-1 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 flex-1 items-start mb-12">
           {/* Left: Inbox List */}
           <div className={`md:col-span-5 ${mobileShowDetail ? 'hidden md:block' : 'block'}`}>
             <InboxList
@@ -222,13 +237,79 @@ export function App() {
             />
           </div>
         </div>
+
+        {/* Features & Value Props Section */}
+        <div className="pt-8 border-t border-gray-800/80">
+          <div className="text-center mb-8">
+            <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
+              Kenapa Memakai Kilat Mail?
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-400">
+              Dirancang untuk kemudahan dan kecepatan maksimal bagi setiap pengunjung.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+            {/* Feature 1 */}
+            <div className="bg-[#111827]/80 border border-gray-800 rounded-2xl p-5 hover:border-amber-500/40 transition-colors shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3.5">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-white mb-1.5">Smart OTP Extractor</h3>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                Secara otomatis mengekstrak digit kode verifikasi atau OTP dari pesan, sehingga kamu bisa menyalinnya dalam 1 klik.
+              </p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="bg-[#111827]/80 border border-gray-800 rounded-2xl p-5 hover:border-cyan-500/40 transition-colors shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-3.5">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-white mb-1.5">100% Privasi & Tanpa Login</h3>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                Tidak ada login, cookie pelacak, atau data pribadi yang disimpan. Email masuk aman dibersihkan secara berkala.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="bg-[#111827]/80 border border-gray-800 rounded-2xl p-5 hover:border-emerald-500/40 transition-colors shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3.5">
+                <Zap className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-white mb-1.5">Serverless Edge Cloudflare</h3>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                Didukung oleh Cloudflare Email Routing, Workers, dan D1 SQLite Edge untuk latensi penerimaan super rendah.
+              </p>
+            </div>
+          </div>
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800/80 py-4 px-4 text-center text-xs text-gray-500">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>⚡ <strong>Kilat Mail</strong> — 100% Serverless Cloudflare Stack</span>
-          <span>Created with ❤️ by <a href="https://github.com/zzdree" target="_blank" rel="noreferrer" className="text-amber-400 hover:underline">zzdree</a></span>
+      <footer className="border-t border-gray-800/80 py-5 px-4 text-center text-xs text-gray-500 bg-[#0B0F19]">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-gray-300">⚡ Kilat Mail</span>
+            <span>— Layanan Email Sementara Serverless</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <a
+              href="https://kilat-mail.pages.dev"
+              className="text-amber-400 hover:underline"
+            >
+              kilat-mail.pages.dev
+            </a>
+            <span>•</span>
+            <a
+              href="https://github.com/zzdree/kilat-mail"
+              target="_blank"
+              rel="noreferrer"
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              GitHub Repo
+            </a>
+          </div>
         </div>
       </footer>
 
