@@ -8,6 +8,11 @@
 ## 📖 Tentang Kilat Mail
 **Kilat Mail** adalah layanan temporary email mandiri (*self-hosted serverless*) yang dirancang untuk menerima pesan verifikasi, OTP, dan email sementara tanpa perlu setup dan maintenance server IMAP/SMTP sendiri.
 
+### 🌐 Live Production Links
+- 🚀 **Frontend Web App:** [https://kilat-mail.pages.dev](https://kilat-mail.pages.dev)
+- ⚡ **Backend API Worker:** [https://kilat-mail-worker.zzdree.workers.dev](https://kilat-mail-worker.zzdree.workers.dev/health)
+- 📦 **GitHub Repository:** [https://github.com/zzdree/kilat-mail](https://github.com/zzdree/kilat-mail)
+
 ### ✨ Fitur Unggulan
 - ⚡ **Super Cepat & Serverless:** Berjalan di jaringan edge global Cloudflare Workers.
 - 🎯 **Smart OTP Extractor:** Otomatis mendeteksi dan mengekstrak kode verifikasi OTP (4-8 digit) dari isi pesan dengan tombol satu-klik salin.
