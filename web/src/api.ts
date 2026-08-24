@@ -28,20 +28,42 @@ function getLocalMockMessages(email: string): MessageDetail[] {
 
 export async function fetchInbox(email: string): Promise<InboxItem[]> {
   const base = getApiBaseUrl();
+  const localMocks = getLocalMockMessages(email).map(({ body_text, body_html, ...rest }) => rest);
+
   if (!base) {
-    // Mode demo / local mock fallback jika worker belum dihubungkan
-    const mock = getLocalMockMessages(email);
-    return mock.map(({ body_text, body_html, ...rest }) => rest);
+    return localMocks;
   }
 
-  const res = await fetch(`${base}/api/inbox?email=${encodeURIComponent(email)}`);
-  if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-  const json = await res.json();
-  if (!json.success) throw new Error(json.error || 'Gagal memuat inbox');
-  return json.data;
+  try {
+    const res = await fetch(`${base}/api/inbox?email=${encodeURIComponent(email)}`);
+    if (!res.ok) {
+      console.warn(`Worker API error (${res.status}), using local mock items.`);
+      return localMocks;
+    }
+    const json = await res.json();
+    if (!json.success) return localMocks;
+    const remoteItems: InboxItem[] = json.data || [];
+    // Gabungkan mock items (jika ada simulasi) dengan remote items
+    return [...localMocks, ...remoteItems];
+  } catch (err) {
+    console.warn('Failed to fetch from worker API, falling back to local storage:', err);
+    return localMocks;
+  }
 }
 
 export async function fetchMessage(id: string): Promise<MessageDetail> {
+  // Cek apakah ID berasal dari local mock simulator
+  if (id.startsWith('mock-')) {
+    const raw = localStorage.getItem(LOCAL_MOCK_STORAGE_KEY);
+    const all: MessageDetail[] = raw ? JSON.parse(raw) : [];
+    const found = all.find((m) => m.id === id);
+    if (found) {
+      found.is_read = 1;
+      localStorage.setItem(LOCAL_MOCK_STORAGE_KEY, JSON.stringify(all));
+      return found;
+    }
+  }
+
   const base = getApiBaseUrl();
   if (!base) {
     const raw = localStorage.getItem(LOCAL_MOCK_STORAGE_KEY);
@@ -61,6 +83,16 @@ export async function fetchMessage(id: string): Promise<MessageDetail> {
 }
 
 export async function deleteMessage(id: string): Promise<void> {
+  if (id.startsWith('mock-')) {
+    const raw = localStorage.getItem(LOCAL_MOCK_STORAGE_KEY);
+    if (raw) {
+      const all: MessageDetail[] = JSON.parse(raw);
+      const filtered = all.filter((m) => m.id !== id);
+      localStorage.setItem(LOCAL_MOCK_STORAGE_KEY, JSON.stringify(filtered));
+    }
+    return;
+  }
+
   const base = getApiBaseUrl();
   if (!base) {
     const raw = localStorage.getItem(LOCAL_MOCK_STORAGE_KEY);
@@ -79,16 +111,15 @@ export async function deleteMessage(id: string): Promise<void> {
 }
 
 export async function clearInbox(email: string): Promise<void> {
-  const base = getApiBaseUrl();
-  if (!base) {
-    const raw = localStorage.getItem(LOCAL_MOCK_STORAGE_KEY);
-    if (raw) {
-      const all: MessageDetail[] = JSON.parse(raw);
-      const filtered = all.filter((m) => m.recipient.toLowerCase() !== email.toLowerCase());
-      localStorage.setItem(LOCAL_MOCK_STORAGE_KEY, JSON.stringify(filtered));
-    }
-    return;
+  const raw = localStorage.getItem(LOCAL_MOCK_STORAGE_KEY);
+  if (raw) {
+    const all: MessageDetail[] = JSON.parse(raw);
+    const filtered = all.filter((m) => m.recipient.toLowerCase() !== email.toLowerCase());
+    localStorage.setItem(LOCAL_MOCK_STORAGE_KEY, JSON.stringify(filtered));
   }
+
+  const base = getApiBaseUrl();
+  if (!base) return;
 
   const res = await fetch(`${base}/api/inbox?email=${encodeURIComponent(email)}`, {
     method: 'DELETE',
