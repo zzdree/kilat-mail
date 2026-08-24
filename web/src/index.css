@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   KILAT MAIL - PRODUCTION UTILITY DESIGN SYSTEM
-   Clean, Fast, Authentic Disposable Email
+   KILAT MAIL - PREMIUM ELEGANT THEME (Zinc / Obsidian / Emerald Tone)
+   Calm, eye-friendly, crystal-clear contrast, no visual clutter
    ========================================================================== */
 
 :root {
@@ -19,8 +19,8 @@ html, body, #root {
 
 body {
   font-family: var(--font-sans);
-  background-color: #0f172a; /* Slate 900 */
-  color: #f8fafc; /* Slate 50 */
+  background-color: #09090b; /* Zinc 950 - Deep rich background */
+  color: #f4f4f5; /* Zinc 100 */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -31,25 +31,25 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #09090b;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #27272a;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #3f3f46;
 }
 
 /* Sanitized Email Frame Styling */
 .email-content-view {
-  color: #e2e8f0;
-  line-height: 1.6;
+  color: #e4e4e7;
+  line-height: 1.65;
   font-size: 0.875rem;
   word-break: break-word;
 }
 .email-content-view a {
-  color: #38bdf8;
+  color: #34d399;
   text-decoration: underline;
 }
 .email-content-view img {

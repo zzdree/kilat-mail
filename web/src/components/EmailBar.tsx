@@ -38,20 +38,23 @@ export const EmailBar: React.FC<EmailBarProps> = ({
   };
 
   return (
-    <div className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 shadow-sm mb-6">
+    <div
+      className="w-full bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-sm mb-6"
+      data-testid="email-bar"
+    >
       {/* Top info label */}
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <label htmlFor="temp-email-input" className="text-xs font-semibold text-slate-400">
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <label htmlFor="temp-email-input" className="text-xs font-semibold text-zinc-400">
           Alamat Email Sementara Kamu:
         </label>
-        <span className="text-[11px] text-slate-500 hidden sm:inline">
-          Otomatis diperbarui secara realtime
+        <span className="text-[11px] text-zinc-500 font-mono hidden sm:inline">
+          Live Instant Push
         </span>
       </div>
 
       {/* Main Email Input / Box */}
       {isEditing ? (
-        <form onSubmit={handleSaveCustom} className="flex gap-2 mb-3">
+        <form onSubmit={handleSaveCustom} className="flex gap-2 mb-3.5">
           <div className="relative flex-1">
             <input
               id="temp-email-input"
@@ -61,43 +64,46 @@ export const EmailBar: React.FC<EmailBarProps> = ({
               onChange={(e) =>
                 setCustomInput(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))
               }
-              className="w-full bg-slate-950 border border-amber-500/70 rounded-lg px-3.5 py-2.5 text-white font-mono text-sm sm:text-base focus:outline-none"
+              className="w-full bg-zinc-950 border border-emerald-500/80 rounded-xl px-4 py-2.5 text-zinc-100 font-mono text-sm sm:text-base focus:outline-none"
               autoFocus
             />
           </div>
           <button
             type="submit"
-            className="px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+            className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs sm:text-sm transition-colors cursor-pointer"
           >
             Simpan
           </button>
           <button
             type="button"
             onClick={() => setIsEditing(false)}
-            className="px-3.5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm transition-colors cursor-pointer"
+            className="px-3.5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs sm:text-sm transition-colors cursor-pointer"
           >
             Batal
           </button>
         </form>
       ) : (
-        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+        <div className="flex flex-col sm:flex-row gap-2.5 mb-3.5">
           <div
             onClick={handleCopy}
-            className="flex-1 bg-slate-950 border border-slate-700/80 hover:border-slate-600 rounded-lg px-3.5 py-2.5 font-mono text-sm sm:text-base font-bold text-slate-100 flex items-center justify-between cursor-pointer transition-colors select-all group"
+            className="flex-1 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-xl px-4 py-3 font-mono text-sm sm:text-base font-bold text-zinc-100 flex items-center justify-between cursor-pointer transition-all select-all group shadow-inner"
             title="Klik untuk menyalin"
+            data-email-value={email}
+            data-testid="email-display"
           >
-            <span className="truncate">{email}</span>
-            <span className="text-xs font-sans text-slate-500 group-hover:text-amber-400 transition-colors ml-2 shrink-0">
+            <span className="truncate text-emerald-300 font-mono">{email}</span>
+            <span className="text-xs font-sans text-zinc-500 group-hover:text-emerald-400 transition-colors ml-2 shrink-0">
               Salin
             </span>
           </div>
 
           <button
             onClick={handleCopy}
-            className={`px-5 py-2.5 rounded-lg font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors shrink-0 cursor-pointer ${
+            data-testid="copy-email-btn"
+            className={`px-5 py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer shadow-sm ${
               copied
-                ? 'bg-emerald-600 text-white'
-                : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                ? 'bg-emerald-500 text-zinc-950'
+                : 'bg-zinc-100 hover:bg-white text-zinc-950'
             }`}
           >
             {copied ? (
@@ -115,24 +121,24 @@ export const EmailBar: React.FC<EmailBarProps> = ({
         </div>
       )}
 
-      {/* Control Buttons Bar (Persis seperti standard Temp Mail) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+      {/* Control Buttons Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <button
           onClick={onRefresh}
           disabled={isRefreshing}
-          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer border border-slate-700"
+          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-zinc-300 text-xs font-medium transition-colors cursor-pointer border border-zinc-800"
           title="Periksa Kotak Masuk Sekarang"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-emerald-400' : 'text-zinc-400'}`} />
           <span>Refresh</span>
         </button>
 
         <button
           onClick={onRandomize}
-          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer border border-slate-700"
+          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-zinc-300 text-xs font-medium transition-colors cursor-pointer border border-zinc-800"
           title="Ganti dengan Email Acak Baru"
         >
-          <Shuffle className="w-3.5 h-3.5 text-slate-400" />
+          <Shuffle className="w-3.5 h-3.5 text-zinc-400" />
           <span>Acak Baru</span>
         </button>
 
@@ -141,19 +147,19 @@ export const EmailBar: React.FC<EmailBarProps> = ({
             setIsEditing(!isEditing);
             setCustomInput(email.split('@')[0]);
           }}
-          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer border border-slate-700"
+          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-zinc-300 text-xs font-medium transition-colors cursor-pointer border border-zinc-800"
           title="Ganti Username Email"
         >
-          <Edit3 className="w-3.5 h-3.5 text-slate-400" />
+          <Edit3 className="w-3.5 h-3.5 text-zinc-400" />
           <span>Ubah Nama</span>
         </button>
 
         <button
           onClick={onOpenQr}
-          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer border border-slate-700"
+          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-zinc-300 text-xs font-medium transition-colors cursor-pointer border border-zinc-800"
           title="Buka QR Code untuk Scan di HP"
         >
-          <QrCode className="w-3.5 h-3.5 text-slate-400" />
+          <QrCode className="w-3.5 h-3.5 text-zinc-400" />
           <span>QR Code</span>
         </button>
       </div>

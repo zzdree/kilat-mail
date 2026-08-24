@@ -15,8 +15,8 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
-  ArrowRight,
-  Shield,
+  Code2,
+  Terminal,
   ExternalLink,
 } from 'lucide-react';
 
@@ -51,19 +51,19 @@ export function App() {
   const faqs = [
     {
       q: 'Apa itu Kilat Mail?',
-      a: 'Kilat Mail adalah layanan email sekali pakai (disposable email) gratis yang memungkinkan kamu menerima email dan kode verifikasi (OTP) secara instan tanpa perlu registrasi atau membocorkan email pribadimu.',
+      a: 'Kilat Mail adalah layanan email sementara (disposable temporary email) gratis untuk menerima pesan dan kode verifikasi OTP secara instan tanpa perlu registrasi.',
     },
     {
-      q: 'Berapa lama email yang masuk disimpan?',
-      a: 'Email yang masuk akan otomatis dihapus oleh sistem setelah 48 jam untuk memastikan privasi dan kebersihan data.',
+      q: 'Apakah bisa digunakan oleh Script / Bot / Scraper?',
+      a: 'Ya! Kilat Mail didesain ramah bot & AI browser agent dengan semantic selector (data-testid) dan REST API publik yang dapat dipanggil langsung dari Python, cURL, Node.js, atau Playwright/Puppeteer.',
     },
     {
-      q: 'Apakah layanan ini gratis?',
-      a: 'Ya, Kilat Mail 100% gratis digunakan kapan saja tanpa batasan jumlah penerimaan email.',
+      q: 'Berapa lama email yang masuk akan disimpan?',
+      a: 'Email secara otomatis dibersihkan dalam 48 jam oleh cron cleaner Cloudflare edge D1 SQLite untuk menjaga kebersihan data dan privasi pengguna.',
     },
     {
-      q: 'Bagaimana cara menyalin kode OTP dengan cepat?',
-      a: 'Sistem pintar Kilat Mail secara otomatis mendeteksi kode verifikasi/OTP di dalam subjek dan isi email, lalu memunculkan tombol 1-klik salin langsung di daftar kotak masuk.',
+      q: 'Apakah Kilat Mail 100% gratis?',
+      a: 'Ya, Kilat Mail gratis selamanya tanpa batasan penerimaan pesan, tanpa iklan mengganggu, dan tanpa pendaftaran akun.',
     },
   ];
 
@@ -179,7 +179,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center selection:bg-emerald-500 selection:text-zinc-950">
       {/* Header */}
       <Header isLive={true} />
 
@@ -187,15 +187,15 @@ export function App() {
       <main className="w-full max-w-3xl px-4 py-8 sm:py-10 flex-1 flex flex-col">
         {/* Title Area */}
         <div className="text-center mb-6">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-100 mb-2 tracking-tight">
             Email Sementara Gratis & Cepat
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
-            Lupakan spam, iklan promosi, dan bot. Lindungi email aslimu dengan email sekali pakai yang aman.
+          <p className="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto leading-relaxed">
+            Terima email aktivasi dan kode OTP instan. Lindungi kotak masuk aslimu dari spam dan pelacak data.
           </p>
         </div>
 
-        {/* Email Bar (Hero Functional Component) */}
+        {/* Email Bar Component */}
         <EmailBar
           email={currentEmail}
           isRefreshing={isRefreshing}
@@ -209,7 +209,8 @@ export function App() {
         <div className="flex justify-end mb-4 -mt-3">
           <button
             onClick={handleInjectTest}
-            className="text-[11px] text-slate-500 hover:text-amber-400 flex items-center gap-1 transition-colors cursor-pointer"
+            data-testid="mock-otp-btn"
+            className="text-[11px] text-zinc-500 hover:text-emerald-400 flex items-center gap-1 transition-colors cursor-pointer"
           >
             <Sparkles className="w-3 h-3" />
             <span>Simulasi Kirim Email Uji Coba</span>
@@ -241,74 +242,105 @@ export function App() {
         </div>
 
         {/* How It Works Section */}
-        <section id="cara-kerja" className="mb-12 border-t border-slate-800/80 pt-8">
-          <h2 className="text-base sm:text-lg font-bold text-white mb-4 text-center">
+        <section id="cara-kerja" className="mb-12 border-t border-zinc-800/80 pt-8">
+          <h2 className="text-base sm:text-lg font-bold text-zinc-100 mb-4 text-center">
             Bagaimana Cara Kerjanya?
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <div className="text-xs font-mono font-bold text-amber-400 mb-1">LANGKAH 01</div>
-              <h3 className="text-sm font-bold text-white mb-1">Salin Alamat</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Salin alamat email sementara yang sudah dibuat secara otomatis di atas.
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
+              <div className="text-xs font-mono font-bold text-emerald-400 mb-1">LANGKAH 01</div>
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">Salin Alamat Email</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Salin alamat email sementara yang sudah dibuat otomatis di atas.
               </p>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <div className="text-xs font-mono font-bold text-amber-400 mb-1">LANGKAH 02</div>
-              <h3 className="text-sm font-bold text-white mb-1">Gunakan di Mana Saja</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Gunakan alamat ini untuk mendaftar di situs web, forum, atau aplikasi.
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
+              <div className="text-xs font-mono font-bold text-emerald-400 mb-1">LANGKAH 02</div>
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">Gunakan untuk Mendaftar</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Pakai alamat email ini untuk registrasi website, aplikasi, atau download file.
               </p>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <div className="text-xs font-mono font-bold text-amber-400 mb-1">LANGKAH 03</div>
-              <h3 className="text-sm font-bold text-white mb-1">Baca Pesan & OTP</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Pesan masuk akan langsung muncul di kotak masuk ini secara realtime.
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
+              <div className="text-xs font-mono font-bold text-emerald-400 mb-1">LANGKAH 03</div>
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">Baca Pesan & Salin OTP</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Pesan akan langsung masuk di kotak masuk secara otomatis dan realtime.
               </p>
             </div>
           </div>
         </section>
 
         {/* Features Section */}
-        <section id="fitur" className="mb-12 border-t border-slate-800/80 pt-8">
-          <h2 className="text-base sm:text-lg font-bold text-white mb-4 text-center">
-            Mengapa Menggunakan Kilat Mail?
+        <section id="fitur" className="mb-12 border-t border-zinc-800/80 pt-8">
+          <h2 className="text-base sm:text-lg font-bold text-zinc-100 mb-4 text-center">
+            Fitur Unggulan
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <KeyRound className="w-5 h-5 text-amber-400 mb-2" />
-              <h3 className="text-sm font-bold text-white mb-1">Ekstraksi OTP Otomatis</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Deteksi otomatis kode OTP atau PIN aktivasi sehingga kamu bisa menyalinnya dengan 1 klik.
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
+              <KeyRound className="w-5 h-5 text-emerald-400 mb-2" />
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">Smart OTP Detection</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Mendeteksi kode OTP verifikasi secara instan dengan tombol 1-klik salin langsung.
               </p>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
               <ShieldCheck className="w-5 h-5 text-emerald-400 mb-2" />
-              <h3 className="text-sm font-bold text-white mb-1">Tanpa Registrasi</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Tanpa username, tanpa password, dan tanpa pelacakan cookie pribadi apapun.
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">100% Tanpa Registrasi</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Langsung pakai tanpa akun, password, nomor HP, atau pelacakan cookie pribadi.
               </p>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <Zap className="w-5 h-5 text-amber-400 mb-2" />
-              <h3 className="text-sm font-bold text-white mb-1">Cepat & Aman</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Ditenagai jaringan edge serverless global dengan pembersihan otomatis 48 jam.
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
+              <Zap className="w-5 h-5 text-emerald-400 mb-2" />
+              <h3 className="text-sm font-bold text-zinc-100 mb-1">Cloudflare Edge Fast</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Ditenagai Cloudflare Email Routing & Workers global dengan auto-purge 48 jam.
               </p>
             </div>
           </div>
         </section>
 
+        {/* API / Developer & Scraper Documentation Section */}
+        <section id="api" className="mb-12 border-t border-zinc-800/80 pt-8">
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 sm:p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-emerald-400" />
+              <h2 className="text-sm sm:text-base font-bold text-zinc-100">
+                Akses API untuk Bot & Automation (Scraper Friendly)
+              </h2>
+            </div>
+            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
+              Kamu bisa mengakses kotak masuk secara terprogram menggunakan HTTP REST endpoint langsung dari Python, Node.js, cURL, atau browser automation:
+            </p>
+
+            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 font-mono text-xs text-zinc-300 space-y-2 overflow-x-auto">
+              <div className="text-zinc-500 font-sans text-[11px] font-bold uppercase tracking-wider">
+                # 1. Fetch Inbox Messages
+              </div>
+              <div className="text-emerald-400 font-mono select-all">
+                GET https://kilat-mail-worker.zzdree.workers.dev/api/inbox?email={currentEmail}
+              </div>
+
+              <div className="text-zinc-500 font-sans text-[11px] font-bold uppercase tracking-wider pt-2">
+                # 2. Fetch Single Message Detail
+              </div>
+              <div className="text-emerald-400 font-mono select-all">
+                GET https://kilat-mail-worker.zzdree.workers.dev/api/message/:id
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* FAQ Section */}
-        <section id="faq" className="mb-8 border-t border-slate-800/80 pt-8">
-          <h2 className="text-base sm:text-lg font-bold text-white mb-4 text-center">
+        <section id="faq" className="mb-8 border-t border-zinc-800/80 pt-8">
+          <h2 className="text-base sm:text-lg font-bold text-zinc-100 mb-4 text-center">
             Pertanyaan Umum (FAQ)
           </h2>
 
@@ -318,21 +350,21 @@ export function App() {
               return (
                 <div
                   key={index}
-                  className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden"
+                  className="bg-zinc-900/80 border border-zinc-800 rounded-xl overflow-hidden"
                 >
                   <button
                     onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                    className="w-full px-4 py-3 text-left flex items-center justify-between gap-2 text-xs sm:text-sm font-semibold text-slate-200 hover:text-white transition-colors cursor-pointer"
+                    className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-2 text-xs sm:text-sm font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
                   >
                     <span>{faq.q}</span>
                     {isOpen ? (
-                      <ChevronUp className="w-4 h-4 text-amber-400 shrink-0" />
+                      <ChevronUp className="w-4 h-4 text-emerald-400 shrink-0" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+                      <ChevronDown className="w-4 h-4 text-zinc-500 shrink-0" />
                     )}
                   </button>
                   {isOpen && (
-                    <div className="px-4 pb-3 pt-1 text-xs text-slate-400 leading-relaxed border-t border-slate-800/60">
+                    <div className="px-4 pb-3.5 pt-1 text-xs text-zinc-400 leading-relaxed border-t border-zinc-800/60">
                       {faq.a}
                     </div>
                   )}
@@ -344,24 +376,26 @@ export function App() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-slate-800 py-6 px-4 text-xs text-slate-500 bg-slate-950">
+      <footer className="w-full border-t border-zinc-800/80 py-6 px-4 text-xs text-zinc-500 bg-zinc-950">
         <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-300">Kilat Mail</span>
-            <span>— Layanan Email Sementara Gratis</span>
+            <span className="font-bold text-zinc-300">Kilat Mail</span>
+            <span>— Email Sementara Bebas Spam</span>
           </div>
 
-          <div className="flex items-center gap-4 text-slate-400">
-            <a href="#fitur" className="hover:text-slate-200">Fitur</a>
-            <a href="#cara-kerja" className="hover:text-slate-200">Cara Kerja</a>
-            <a href="#faq" className="hover:text-slate-200">FAQ</a>
+          <div className="flex items-center gap-4 text-zinc-400">
+            <a href="#fitur" className="hover:text-zinc-200">Fitur</a>
+            <a href="#cara-kerja" className="hover:text-zinc-200">Cara Kerja</a>
+            <a href="#api" className="hover:text-zinc-200">API Bot</a>
+            <a href="#faq" className="hover:text-zinc-200">FAQ</a>
             <a
               href="https://github.com/zzdree/kilat-mail"
               target="_blank"
               rel="noreferrer"
-              className="text-amber-400 hover:underline"
+              className="text-emerald-400 hover:underline inline-flex items-center gap-1"
             >
-              GitHub
+              <span>GitHub</span>
+              <ExternalLink className="w-3 h-3" />
             </a>
           </div>
         </div>
