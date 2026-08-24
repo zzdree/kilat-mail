@@ -1,26 +1,53 @@
-import React, { useState } from 'react';
-import { Copy, Check, Shuffle, Edit3, RefreshCw, QrCode } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Copy,
+  Check,
+  Shuffle,
+  Edit3,
+  RefreshCw,
+  QrCode,
+  Globe,
+  ChevronDown,
+} from 'lucide-react';
 
 interface EmailBarProps {
   email: string;
+  domain: string;
+  availableDomains: string[];
   isRefreshing: boolean;
   onRefresh: () => void;
   onRandomize: () => void;
   onChangeUsername: (newUsername: string) => void;
+  onSelectDomain: (newDomain: string) => void;
   onOpenQr: () => void;
 }
 
 export const EmailBar: React.FC<EmailBarProps> = ({
   email,
+  domain,
+  availableDomains,
   isRefreshing,
   onRefresh,
   onRandomize,
   onChangeUsername,
+  onSelectDomain,
   onOpenQr,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [customInput, setCustomInput] = useState('');
+  const [isDomainMenuOpen, setIsDomainMenuOpen] = useState(false);
+  const domainRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (domainRef.current && !domainRef.current.contains(e.target as Node)) {
+        setIsDomainMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(email);
@@ -42,14 +69,47 @@ export const EmailBar: React.FC<EmailBarProps> = ({
       className="w-full bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-sm mb-6"
       data-testid="email-bar"
     >
-      {/* Top info label */}
+      {/* Top info label & Quick Domain Switcher */}
       <div className="flex items-center justify-between gap-2 mb-2.5">
         <label htmlFor="temp-email-input" className="text-xs font-semibold text-zinc-400">
-          Alamat Email Sementara Kamu:
+          Alamat Email Sementara:
         </label>
-        <span className="text-[11px] text-zinc-500 font-mono hidden sm:inline">
-          Live Instant Push
-        </span>
+
+        {/* Domain Switcher Pill */}
+        <div className="relative" ref={domainRef}>
+          <button
+            onClick={() => setIsDomainMenuOpen(!isDomainMenuOpen)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white font-mono text-[11px] transition-colors cursor-pointer"
+            title="Ganti Domain Email"
+          >
+            <Globe className="w-3 h-3 text-emerald-400" />
+            <span>@{domain}</span>
+            <ChevronDown className="w-3 h-3 text-zinc-500" />
+          </button>
+
+          {isDomainMenuOpen && (
+            <div className="absolute right-0 mt-1.5 w-44 bg-zinc-900 border border-zinc-700/80 rounded-xl shadow-xl py-1 z-30 font-mono text-xs animate-fade-in">
+              <div className="px-3 py-1 text-[10px] text-zinc-500 font-sans uppercase font-bold tracking-wider border-b border-zinc-800">
+                Pilih Domain
+              </div>
+              {availableDomains.map((d) => (
+                <button
+                  key={d}
+                  onClick={() => {
+                    onSelectDomain(d);
+                    setIsDomainMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 hover:bg-zinc-800 transition-colors flex items-center justify-between cursor-pointer ${
+                    domain === d ? 'text-emerald-400 font-bold bg-emerald-500/10' : 'text-zinc-300'
+                  }`}
+                >
+                  <span>@{d}</span>
+                  {domain === d && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Email Input / Box */}

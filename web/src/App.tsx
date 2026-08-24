@@ -21,6 +21,13 @@ import {
 } from 'lucide-react';
 
 const DEFAULT_DOMAIN = 'kilat.eu.org';
+const AVAILABLE_DOMAINS = [
+  'kilat.eu.org',
+  'kilat.pp.ua',
+  'kilat.is-a.dev',
+  'kilat.js.cool',
+  'temp.kilat.eu.org',
+];
 
 function generateRandomEmail(domain: string): string {
   const randomChars = Math.random().toString(36).substring(2, 8);
@@ -28,7 +35,9 @@ function generateRandomEmail(domain: string): string {
 }
 
 export function App() {
-  const [domain] = useState<string>(DEFAULT_DOMAIN);
+  const [domain, setDomain] = useState<string>(() => {
+    return localStorage.getItem('kilat_mail_domain') || DEFAULT_DOMAIN;
+  });
 
   const [currentEmail, setCurrentEmail] = useState<string>(() => {
     const saved = localStorage.getItem('kilat_mail_current_address');
@@ -54,6 +63,10 @@ export function App() {
       a: 'Kilat Mail adalah layanan email sementara (disposable temporary email) gratis untuk menerima pesan dan kode verifikasi OTP secara instan tanpa perlu registrasi.',
     },
     {
+      q: 'Apakah saya bisa memilih domain lain?',
+      a: 'Ya! Kilat Mail mendukung beberapa domain gratis populer seperti @kilat.eu.org, @kilat.pp.ua, @kilat.is-a.dev, dan @kilat.js.cool. Kamu bisa memilihnya langsung di tombol domain di atas.',
+    },
+    {
       q: 'Apakah bisa digunakan oleh Script / Bot / Scraper?',
       a: 'Ya! Kilat Mail didesain ramah bot & AI browser agent dengan semantic selector (data-testid) dan REST API publik yang dapat dipanggil langsung dari Python, cURL, Node.js, atau Playwright/Puppeteer.',
     },
@@ -66,6 +79,17 @@ export function App() {
       a: 'Ya, Kilat Mail gratis selamanya tanpa batasan penerimaan pesan, tanpa iklan mengganggu, dan tanpa pendaftaran akun.',
     },
   ];
+
+  const handleSelectDomain = (newDomain: string) => {
+    setDomain(newDomain);
+    localStorage.setItem('kilat_mail_domain', newDomain);
+    const username = currentEmail.split('@')[0];
+    const updated = `${username}@${newDomain}`;
+    setCurrentEmail(updated);
+    localStorage.setItem('kilat_mail_current_address', updated);
+    setSelectedId(null);
+    setSelectedMessage(null);
+  };
 
   const handleRandomize = () => {
     const fresh = generateRandomEmail(domain);
@@ -198,10 +222,13 @@ export function App() {
         {/* Email Bar Component */}
         <EmailBar
           email={currentEmail}
+          domain={domain}
+          availableDomains={AVAILABLE_DOMAINS}
           isRefreshing={isRefreshing}
           onRefresh={() => loadInbox(true)}
           onRandomize={handleRandomize}
           onChangeUsername={handleChangeUsername}
+          onSelectDomain={handleSelectDomain}
           onOpenQr={() => setIsQrOpen(true)}
         />
 
