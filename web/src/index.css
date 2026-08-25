@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   KILAT MAIL - PREMIUM ELEGANT THEME (Zinc / Obsidian / Emerald Tone)
-   Calm, eye-friendly, crystal-clear contrast, no visual clutter
+   KILAT MAIL - DUAL THEME ENGINE (Dark & Light Mode Support)
+   Electric Emerald & Neutral Zinc Precision
    ========================================================================== */
 
 :root {
@@ -17,12 +17,20 @@ html, body, #root {
   padding: 0;
 }
 
+/* Default Dark Theme */
 body {
   font-family: var(--font-sans);
-  background-color: #09090b; /* Zinc 950 - Deep rich background */
-  color: #f4f4f5; /* Zinc 100 */
+  background-color: #09090b;
+  color: #f4f4f5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Light Mode Overrides */
+html.light body {
+  background-color: #f8fafc; /* Slate/Zinc 50 */
+  color: #0f172a; /* Slate 900 */
 }
 
 /* Custom Scrollbars */
@@ -31,25 +39,30 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: #27272a;
   border-radius: 3px;
 }
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
 ::-webkit-scrollbar-thumb:hover {
   background: #3f3f46;
+}
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Sanitized Email Frame Styling */
 .email-content-view {
-  color: #e4e4e7;
   line-height: 1.65;
   font-size: 0.875rem;
   word-break: break-word;
 }
 .email-content-view a {
-  color: #34d399;
+  color: #10b981;
   text-decoration: underline;
 }
 .email-content-view img {
