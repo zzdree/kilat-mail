@@ -69,6 +69,25 @@ export function App() {
     return localStorage.getItem('kilat_mail_domain') || 'sharklasers.com';
   });
 
+  // Theme (dark / light) — persisted to localStorage and applied to <html>
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const saved = localStorage.getItem('kilat_mail_theme');
+    return saved === 'light' ? 'light' : 'dark';
+  });
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+    localStorage.setItem('kilat_mail_theme', theme);
+  }, [theme]);
+
+  const handleToggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
+
   const [currentEmail, setCurrentEmail] = useState<string>(() => {
     const saved = localStorage.getItem('kilat_mail_current_address');
     if (saved) return saved;
@@ -444,9 +463,10 @@ export function App() {
       {/* Header */}
       <Header
         isLive={true}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
         notificationPermission={notificationPermission}
         onRequestNotification={handleRequestNotification}
-        onInjectTest={handleInjectTest}
       />
 
       {/* Main Container */}
